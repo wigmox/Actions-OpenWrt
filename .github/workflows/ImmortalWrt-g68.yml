@@ -34,10 +34,10 @@ on:
         required: true
         type: choice
         options:
-          - '24.10'
-          - '24.10.y'
+          - 'openwrt-24.10'
+          - 'openwrt-24.10.y'
           - 'main'
-        default: '24.10'
+        default: 'openwrt-24.10'
 
 env:
   REPO_URL: https://github.com/immortalwrt/${{ inputs.branch }}
