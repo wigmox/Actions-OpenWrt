@@ -34,22 +34,22 @@ on:
         required: true
         type: choice
         options:
-          - 24.10
-          - 24.10.y
-          - main
+          - '24.10'
+          - '24.10.y'
+          - 'main'
         default: '24.10'
 
 env:
   REPO_URL: https://github.com/immortalwrt/"${{ inputs.branch }}"
   REPO_BRANCH: "${{ inputs.version }}"
   CONFIG_FILE: userpatches/immortalwrt/defconfig/g68.config
-  CONFIG_FILE2: userpatches/"${{ inputs.branch }}"/defconfig/"${{ inputs.branch }}".config
+  CONFIG_FILE2: userpatches/"${{ inputs.branch }}"/defconfig/"${{ inputs.board }}".config
   DIY_SCRIPT: diy-immortalwrt.sh
   CLASH_KERNEL: arm64
   CACHE_TOOLCHAIN: true
   UPLOAD_BIN_DIR: false
   FIRMWARE_RELEASE: true
-  FIRMWARE_TAG: "${{ inputs.branch }}"-"${{ inputs.board }}"
+  FIRMWARE_TAG: immortalwrt-g68
   TZ: Asia/Shanghai
   GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
 
