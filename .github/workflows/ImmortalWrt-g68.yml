@@ -44,7 +44,7 @@ env:
   REPO_BRANCH: "${{ inputs.version }}"
   CONFIG_FILE: userpatches/ImmortalWrt/defconfig/g68.config
   CONFIG_FILE2: userpatches/${{ inputs.branch }}/defconfig/${{ inputs.board }}.config
-  DIY_SCRIPT: diy-immortalwrt.sh
+  DIY_SCRIPT: diy-ImmortalWrt.sh
   CLASH_KERNEL: arm64
   CACHE_TOOLCHAIN: true
   UPLOAD_BIN_DIR: false
