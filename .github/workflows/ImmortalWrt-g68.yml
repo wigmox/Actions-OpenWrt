@@ -40,10 +40,10 @@ on:
         default: '24.10'
 
 env:
-  REPO_URL: https://github.com/immortalwrt/"${{ inputs.branch }}"
+  REPO_URL: https://github.com/immortalwrt/${{ inputs.branch }}
   REPO_BRANCH: "${{ inputs.version }}"
   CONFIG_FILE: userpatches/immortalwrt/defconfig/g68.config
-  CONFIG_FILE2: userpatches/"${{ inputs.branch }}"/defconfig/"${{ inputs.board }}".config
+  CONFIG_FILE2: userpatches/${{ inputs.branch }}/defconfig/${{ inputs.board }}.config
   DIY_SCRIPT: diy-immortalwrt.sh
   CLASH_KERNEL: arm64
   CACHE_TOOLCHAIN: true
