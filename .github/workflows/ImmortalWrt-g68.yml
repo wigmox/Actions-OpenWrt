@@ -16,7 +16,7 @@ on:
           - g68-plus
           - g18-pro
           - g16-plus
-        default: "g68-plus"
+        default: 'g68-plus'
 
       branch:
         description: '系统分支'
@@ -27,28 +27,29 @@ on:
           - immortalwrt
           - istoreos
           - LEDE
-        default: ImmortalWrt
+        default: 'immortalwrt'
 
       version:
-        description: '系统 版本 (带 .y 匹配最新 tag)'
+        description: '系统版本 (带 .y 匹配最新 tag)'
         required: true
         type: choice
         options:
           - 24.10
-          - 25.10.y
+          - 24.10.y
           - main
-        default: 24.10
+        default: '24.10'
 
 env:
   REPO_URL: https://github.com/immortalwrt/"${{ inputs.branch }}"
   REPO_BRANCH: "${{ inputs.version }}"
-  CONFIG_FILE: userpatches/ImmortalWrt/defconfig/g68.config
-  DIY_SCRIPT: diy-ImmortalWrt.sh
+  CONFIG_FILE: userpatches/immortalwrt/defconfig/g68.config
+  CONFIG_FILE2: userpatches/"${{ inputs.branch }}"/defconfig/"${{ inputs.branch }}".config
+  DIY_SCRIPT: diy-immortalwrt.sh
   CLASH_KERNEL: arm64
   CACHE_TOOLCHAIN: true
   UPLOAD_BIN_DIR: false
   FIRMWARE_RELEASE: true
-  FIRMWARE_TAG: immortalwrt-g68
+  FIRMWARE_TAG: "${{ inputs.branch }}"-"${{ inputs.board }}"
   TZ: Asia/Shanghai
   GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
 
