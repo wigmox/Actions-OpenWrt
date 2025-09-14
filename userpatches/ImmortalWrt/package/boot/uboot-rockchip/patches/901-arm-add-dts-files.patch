@@ -1,0 +1,14 @@
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -95,6 +95,9 @@ dtb-$(CONFIG_ROCKCHIP_RK3566) += \
+ 	rk3566-nanopi-r3s.dtb \
+ 
+ dtb-$(CONFIG_ROCKCHIP_RK3568) += \
++	rk3568-nsy-g16-plus.dtb \
++	rk3568-nsy-g68-plus.dtb \
++	rk3568-bdy-g18-pro.dtb \
+ 	rk3568-armsom-sige3.dtb \
+ 	rk3568-mmbox-anas3035.dtb \
+ 	rk3568-lyt-t68m.dtb \
