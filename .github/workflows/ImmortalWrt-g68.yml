@@ -42,7 +42,7 @@ on:
 env:
   REPO_URL: https://github.com/immortalwrt/${{ inputs.branch }}
   REPO_BRANCH: "${{ inputs.version }}"
-  CONFIG_FILE: ${GITHUB_WORKSPACE}/userpatches/immortalwrt/defconfig/g68.config
+  CONFIG_FILE: ${GITHUB_WORKSPACE}/userpatches/ImmortalWrt/defconfig/g68.config
   CONFIG_FILE2: ${GITHUB_WORKSPACE}/userpatches/${{ inputs.branch }}/defconfig/${{ inputs.board }}.config
   DIY_SCRIPT: diy-immortalwrt.sh
   CLASH_KERNEL: arm64
