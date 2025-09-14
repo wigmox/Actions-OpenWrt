@@ -5,9 +5,42 @@ on:
   schedule:
     - cron: 0 20 * * *
 
+    inputs:
+
+      board:
+        description: '设备型号'
+        required: true
+        type: choice
+        options:
+          - g68-plus
+          - g18-pro
+          - g16-plus
+        default: "g68-plus"
+
+      branch:
+        description: '系统分支'
+        required: true
+        type: choice
+        options:
+          - OpenWrt
+          - immortalwrt
+          - istoreos
+          - LEDE
+        default: ImmortalWrt
+
+      version:
+        description: '系统 版本 (带 .y 匹配最新 tag)'
+        required: true
+        type: choice
+        options:
+          - 24.10
+          - 25.10.y
+          - main
+        default: 24.10
+
 env:
-  REPO_URL: https://github.com/immortalwrt/immortalwrt
-  REPO_BRANCH: openwrt-2024.10
+  REPO_URL: https://github.com/immortalwrt/"${{ inputs.branch }}"
+  REPO_BRANCH: "${{ inputs.version }}"
   CONFIG_FILE: userpatches/ImmortalWrt/defconfig/g68.config
   DIY_SCRIPT: diy-ImmortalWrt.sh
   CLASH_KERNEL: arm64
