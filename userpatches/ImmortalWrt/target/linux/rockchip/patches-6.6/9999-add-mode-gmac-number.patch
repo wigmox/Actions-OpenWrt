@@ -1,0 +1,35 @@
+--- a/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c	2025-04-29 20:28:55.028107405 +0800
++++ b/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c	2025-04-29 20:49:44.838103918 +0800
+@@ -1198,6 +1198,7 @@ static void rk3568_set_to_sgmii(struct r
+ 
+ 	con1 = (bsp_priv->id == 1) ? RK3568_GRF_GMAC1_CON1 :
+ 				     RK3568_GRF_GMAC0_CON1;
++	dev_info(dev, "SGMII GMAC ID IS %d\n",bsp_priv->id);
+ 	regmap_write(bsp_priv->grf, con1, RK3568_GMAC_GMII_MODE);
+ 
+ 	xpcs_setup(bsp_priv, PHY_INTERFACE_MODE_SGMII);
+@@ -1215,6 +1216,7 @@ static void rk3568_set_to_qsgmii(struct
+ 
+ 	con1 = (bsp_priv->id == 1) ? RK3568_GRF_GMAC1_CON1 :
+ 				     RK3568_GRF_GMAC0_CON1;
++	dev_info(dev, "QSGMII GMAC ID IS %d\n",bsp_priv->id);
+ 	regmap_write(bsp_priv->grf, con1, RK3568_GMAC_GMII_MODE);
+ 
+ 	xpcs_setup(bsp_priv, PHY_INTERFACE_MODE_QSGMII);
+@@ -1235,7 +1237,7 @@ static void rk3568_set_to_rgmii(struct r
+ 				     RK3568_GRF_GMAC0_CON0;
+ 	con1 = (bsp_priv->id == 1) ? RK3568_GRF_GMAC1_CON1 :
+ 				     RK3568_GRF_GMAC0_CON1;
+-
++	dev_info(dev, "RGMII GMAC ID IS %d\n",bsp_priv->id);
+ 	regmap_write(bsp_priv->grf, con0,
+ 		     RK3568_GMAC_CLK_RX_DL_CFG(rx_delay) |
+ 		     RK3568_GMAC_CLK_TX_DL_CFG(tx_delay));
+@@ -1258,6 +1260,7 @@ static void rk3568_set_to_rmii(struct rk
+ 
+ 	con1 = (bsp_priv->id == 1) ? RK3568_GRF_GMAC1_CON1 :
+ 				     RK3568_GRF_GMAC0_CON1;
++	dev_info(dev, "RMII GMAC ID IS %d\n",bsp_priv->id);
+ 	regmap_write(bsp_priv->grf, con1, RK3568_GMAC_PHY_INTF_SEL_RMII);
+ }
+ 
