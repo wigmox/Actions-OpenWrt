@@ -11,4 +11,4 @@ config mount overlay
         option label 'rootfs_data'
         option options 'rw,noatime'
         option enabled '1'
-
+        option enabled_fsck '1'

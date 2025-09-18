@@ -34,15 +34,15 @@ on:
         required: true
         type: choice
         options:
-          - 'openwrt-24.10'
-          - 'openwrt-24.10.y'
-          - 'main'
+          - openwrt-24.10
+          - 24.10.2
+          - main
         default: 'openwrt-24.10'
 
 env:
   REPO_URL: https://github.com/immortalwrt/${{ inputs.branch }}
   REPO_BRANCH: "${{ inputs.version }}"
-  CONFIG_FILE: userpatches/ImmortalWrt/defconfig/g68.config
+  CONFIG_FILE: userpatches/ImmortalWrt/defconfig/${{ inputs.board }}_mtk_wifi.config
   CONFIG_FILE2: userpatches/${{ inputs.branch }}/defconfig/${{ inputs.board }}.config
   DIY_SCRIPT: diy-ImmortalWrt.sh
   CLASH_KERNEL: arm64
@@ -171,8 +171,8 @@ jobs:
       run: |
         df -hT
         sudo chmod -R +w ./  # 确保当前目录可写
-        # rsync -av --progress $GITHUB_WORKSPACE/userpatches/ImmortalWrt/ $OPENWRT_PATH/
-        cp --preserve=all -r $GITHUB_WORKSPACE/userpatches/ImmortalWrt/* $OPENWRT_PATH/
+        rsync -av --progress $GITHUB_WORKSPACE/userpatches/ImmortalWrt/ $OPENWRT_PATH/
+        # cp --preserve=all -r $GITHUB_WORKSPACE/userpatches/ImmortalWrt/* $OPENWRT_PATH/
         [ -e files ] && mv files $OPENWRT_PATH/files
         [ -e $CONFIG_FILE ] && mv $CONFIG_FILE $OPENWRT_PATH/.config
         chmod +x $GITHUB_WORKSPACE/scripts/*.sh

@@ -13,10 +13,10 @@ sed -i "s/OPENWRT_RELEASE.*/OPENWRT_RELEASE=\"%D %V ${date_version} by ${author}
 sed -i 's/192.168.1.1/10.0.0.1/g' package/base-files/files/bin/config_generate
 
 # 更改默认 Shell 为 zsh
-sed -i 's/\/bin\/ash/\/usr\/bin\/zsh/g' package/base-files/files/etc/passwd
+# sed -i 's/\/bin\/ash/\/usr\/bin\/zsh/g' package/base-files/files/etc/passwd
 
 # TTYD 免登录
-# sed -i 's|/bin/login|/bin/login -f root|g' feeds/packages/utils/ttyd/files/ttyd.config
+sed -i 's|/bin/login|/bin/login -f root|g' feeds/packages/utils/ttyd/files/ttyd.config
 
 # 80_mount_root 添加挂载目录
 # 这个脚本用于在package/base-files/files/lib/preinit/80_mount_root文件中的do_mount_root函数内添加resize2fs命令
@@ -98,10 +98,6 @@ for cfg in "${CONFIGS6[@]}"; do
 echo "[成功] 已修改: $cfg" || echo "[失败] 修改出错: $cfg"
 done
 
-# target/linux/rockchip/Makefile 添加 resize2fs
-
-sed -i '/uboot-envtools/s/\buboot-envtools\b/& resize2fs/' target/linux/rockchip/Makefile
-
 # target/linux/rockchip/armv8/config-6.6 ，config-6.12启用 CONFIG_SWCONFIG=y
 
 CONFIG_DIR="target/linux/rockchip/armv8"
@@ -138,11 +134,13 @@ TARGET_DEVICES += nsy_g68-plus" >> target/linux/rockchip/image/armv8.mk
 
 # 增加nsy_g16-plus
 echo -e "\\ndefine Device/nsy_g16-plus
-\$(call Device/Legacy/rk3568,\$(1))
   DEVICE_VENDOR := NSY
-  DEVICE_MODEL := G16
-  DEVICE_DTS := rk3568/rk3568-nsy-g16-plus
-  DEVICE_PACKAGES += kmod-nvme kmod-ata-ahci-dwc kmod-hwmon-pwmfan kmod-thermal kmod-switch-rtl8306 kmod-switch-rtl8366-smi kmod-switch-rtl8366rb kmod-switch-rtl8366s kmod-switch-rtl8367b swconfig kmod-swconfig kmod-r8169 kmod-mt7615-firmware
+  DEVICE_MODEL := G16-PLUS
+  SOC := rk3568
+  DEVICE_DTS := rockchip/rk3568-nsy-g16-plus
+  UBOOT_DEVICE_NAME := nsy-g16-plus-rk3568
+  BOOT_FLOW := pine64-img
+  DEVICE_PACKAGES := kmod-mt7615-firmware kmod-switch-rtl8367b wpad-openssl
 endef
 TARGET_DEVICES += nsy_g16-plus" >> target/linux/rockchip/image/armv8.mk
 
@@ -160,6 +158,16 @@ endef
 TARGET_DEVICES += bdy_g18-pro" >> target/linux/rockchip/image/armv8.mk
 
 
+# 下载 openclash 内核文件 
+    mkdir target/linux/rockchip/armv8/base-files/etc/openclash/core
+    # Download clash_meta
+    META_URL="https://raw.githubusercontent.com/vernesong/OpenClash/core/master/meta/clash-linux-arm64.tar.gz"
+    wget -qO- $META_URL | tar xOvz > target/linux/rockchip/armv8/base-files/etc/openclash/core/clash_meta
+    chmod +x target/linux/rockchip/armv8/base-files/etc/openclash/core/clash_meta
+    # Download GeoIP and GeoSite
+    wget -q https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat -O target/linux/rockchip/armv8/base-files/etc/openclash/GeoIP.dat
+    # wget -q https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat -O target/linux/rockchip/armv8/base-files/etc/openclash/GeoSite.dat
+
 # 拉取仓库文件夹
 merge_package() {
 	# 参数1是分支名,参数2是库地址,参数3是所有文件下载到指定路径。
@@ -167,6 +175,10 @@ merge_package() {
 	# 示例:
 	# merge_package master https://github.com/WYC-2020/openwrt-packages package/openwrt-packages luci-app-eqos luci-app-openclash luci-app-ddnsto ddnsto 
 	# merge_package master https://github.com/lisaac/luci-app-dockerman package/lean applications/luci-app-dockerman
+	
+	# 应用过滤（OpenAppFilter）
+	merge_package master https://github.com/destan19/OpenAppFilter package/OpenAppFilter luci-app-oaf oaf open-app-filter
+	
 	if [[ $# -lt 3 ]]; then
 		echo "Syntax error: [$#] [$*]" >&2
 		return 1
@@ -232,13 +244,6 @@ rm -rf feeds/luci/themes/luci-theme-argon/htdocs/luci-static/argon/background/*
 
 # 最大连接数修改为65535
 sed -i '/customized in this file/a net.netfilter.nf_conntrack_max=65535' package/base-files/files/etc/sysctl.conf
-
-
-# 集成CPU性能跑分脚本
-cp -f $GITHUB_WORKSPACE/configfiles/coremark/coremark-arm64 package/base-files/files/bin/coremark-arm64
-cp -f $GITHUB_WORKSPACE/configfiles/coremark/coremark-arm64.sh package/base-files/files/bin/coremark.sh
-chmod 755 package/base-files/files/bin/coremark-arm64
-chmod 755 package/base-files/files/bin/coremark.sh
 
 
 # 定时限速插件
