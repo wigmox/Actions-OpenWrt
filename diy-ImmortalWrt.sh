@@ -249,6 +249,3 @@ sed -i '/customized in this file/a net.netfilter.nf_conntrack_max=65535' package
 # 定时限速插件
 git clone --depth=1 https://github.com/sirpdboy/luci-app-eqosplus package/luci-app-eqosplus
 
-
-./scripts/feeds update -a
-./scripts/feeds install -a
