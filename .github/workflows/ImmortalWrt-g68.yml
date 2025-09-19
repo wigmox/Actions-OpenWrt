@@ -122,9 +122,14 @@ jobs:
     - name: 加载自定义配置
       run: |
         df -hT
-        sudo chmod -R +w ./  # 确保当前目录可写
+        # 确保当前目录可写
+        sudo chmod -R +w ./
+        
+        # 复制自定义机型配置文件到源码根目录
         rsync -av --progress $GITHUB_WORKSPACE/userpatches/ImmortalWrt/ $OPENWRT_PATH/
         # cp --preserve=all -r $GITHUB_WORKSPACE/userpatches/ImmortalWrt/* $OPENWRT_PATH/
+        
+        # 复制
         [ -e files ] && mv files $OPENWRT_PATH/files
         # [ -e $CONFIG_FILE ] && mv $CONFIG_FILE $OPENWRT_PATH/.config
         chmod +x $GITHUB_WORKSPACE/scripts/*.sh
@@ -138,14 +143,21 @@ jobs:
       id: variable
       run: |
         df -hT
+        # 复制 .config 文件到源码根目录
         cp $CONFIG_FILE $OPENWRT_PATH/.config
         cd $OPENWRT_PATH
-        make defconfig > /dev/null 2>&1
+        # make defconfig > /dev/null 2>&1
+        
+        # 源码链接
         SOURCE_REPO="$(echo $REPO_URL | awk -F '/' '{print $(NF)}')"
         echo "SOURCE_REPO=$SOURCE_REPO" >> $GITHUB_ENV
+        
+        # 读取 CPU 信息
         DEVICE_TARGET=$(cat .config | grep CONFIG_TARGET_BOARD | awk -F '"' '{print $2}')
         echo "DEVICE_TARGET=$DEVICE_TARGET" >> $GITHUB_ENV
         echo "DEVICE_TARGET=$DEVICE_TARGET" >> $GITHUB_OUTPUT
+        
+        # 读取 CPU 架构
         DEVICE_SUBTARGET=$(cat .config | grep CONFIG_TARGET_SUBTARGET | awk -F '"' '{print $2}')
         echo "DEVICE_SUBTARGET=$DEVICE_SUBTARGET" >> $GITHUB_ENV
         echo "DEVICE_SUBTARGET=$DEVICE_SUBTARGET" >> $GITHUB_OUTPUT
