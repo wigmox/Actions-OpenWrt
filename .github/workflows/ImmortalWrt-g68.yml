@@ -147,7 +147,7 @@ jobs:
         
         # 复制
         [ -e files ] && mv files $OPENWRT_PATH/files
-        # [ -e $CONFIG_FILE ] && mv $CONFIG_FILE $OPENWRT_PATH/.config
+        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE $OPENWRT_PATH/.config
         chmod +x $GITHUB_WORKSPACE/scripts/*.sh
         chmod +x $DIY_SCRIPT
         cd $OPENWRT_PATH
@@ -162,7 +162,7 @@ jobs:
       run: |
         df -hT
         # 复制 .config 文件到源码根目录
-        cp $CONFIG_FILE $OPENWRT_PATH/.config
+        # cp $CONFIG_FILE $OPENWRT_PATH/.config
         cd $OPENWRT_PATH
         # make defconfig > /dev/null 2>&1
         
@@ -184,6 +184,7 @@ jobs:
       if: env.CACHE_TOOLCHAIN == 'true'
       uses: HiGarfield/cachewrtbuild@main
       with:
+        # 检查是否缓存 ccache
         ccache: false
         mixkey: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.DEVICE_TARGET }}-${{ env.DEVICE_SUBTARGET }}
         prefix: ${{ env.OPENWRT_PATH }}
