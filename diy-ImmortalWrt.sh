@@ -177,7 +177,7 @@ merge_package() {
 	# merge_package master https://github.com/lisaac/luci-app-dockerman package/lean applications/luci-app-dockerman
 	
 	# 应用过滤（OpenAppFilter）
-	# merge_package master https://github.com/destan19/OpenAppFilter package/OpenAppFilter luci-app-oaf oaf open-app-filter
+	merge_package master https://github.com/destan19/OpenAppFilter package/OpenAppFilter luci-app-oaf oaf open-app-filter
 	
 	if [[ $# -lt 3 ]]; then
 		echo "Syntax error: [$#] [$*]" >&2
@@ -200,6 +200,8 @@ merge_package() {
 	done
 	cd "$rootdir"
 }
+ls package/
+
 
 # Git稀疏克隆，只克隆指定目录到本地
 function git_sparse_clone() {
@@ -211,7 +213,7 @@ function git_sparse_clone() {
   cd .. && rm -rf $repodir
 }
 
-
+ls package/
 
 # Themes
 # git clone --depth=1 -b 18.06 https://github.com/jerrykuku/luci-theme-argon package/luci-theme-argon
