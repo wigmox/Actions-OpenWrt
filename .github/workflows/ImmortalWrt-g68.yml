@@ -16,7 +16,7 @@ on:
           - g68-plus
           - g18-pro
           - g16-plus
-        default: 'g68-plus'
+        default: "g68-plus"
 
       branch:
         description: '系统分支'
@@ -27,7 +27,7 @@ on:
           - immortalwrt
           - istoreos
           - LEDE
-        default: 'immortalwrt'
+        default: "immortalwrt"
 
       version:
         description: '系统版本 (带 .y 匹配最新 tag)'
@@ -37,11 +37,11 @@ on:
           - openwrt-24.10
           - 24.10.2
           - main
-        default: 'openwrt-24.10'
+        default: "openwrt-24.10"
 
 env:
   REPO_URL: https://github.com/immortalwrt/${{ inputs.branch }}
-  REPO_BRANCH: "${{ inputs.version }}"
+  REPO_BRANCH: ${{ inputs.version }}
   CONFIG_FILE: userpatches/ImmortalWrt/defconfig/${{ inputs.board }}_mtk_wifi.config
   CONFIG_FILE2: userpatches/${{ inputs.branch }}/defconfig/${{ inputs.board }}.config
   DIY_SCRIPT: diy-ImmortalWrt.sh
@@ -49,7 +49,7 @@ env:
   CACHE_TOOLCHAIN: true
   UPLOAD_BIN_DIR: false
   FIRMWARE_RELEASE: true
-  FIRMWARE_TAG: immortalwrt-g68
+  FIRMWARE_TAG: ${{ inputs.branch }}-${{ inputs.board }}
   TZ: Asia/Shanghai
   GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
 
@@ -97,7 +97,7 @@ jobs:
         echo "--------------------------硬盘信息--------------------------"
         echo "硬盘数量: $(ls /dev/sd* | grep -v [1-9] | wc -l)" && df -hT
 
-    - name: 克隆源代码
+    - name: 克隆源代码-${{ inputs.branch }}-${{ inputs.version }}
       working-directory: ${{ env.WORKDIR }}/workdir
       id: clone
       run: |
@@ -118,6 +118,21 @@ jobs:
         COMMIT_HASH=$(git show -s --date=short --format="hash: %H")
         echo "COMMIT_HASH=$COMMIT_HASH" >> $GITHUB_ENV
         echo "COMMIT_HASH=$COMMIT_HASH" >> $GITHUB_OUTPUT
+
+    - name: 加载自定义配置
+      run: |
+        df -hT
+        sudo chmod -R +w ./  # 确保当前目录可写
+        rsync -av --progress $GITHUB_WORKSPACE/userpatches/ImmortalWrt/ $OPENWRT_PATH/
+        # cp --preserve=all -r $GITHUB_WORKSPACE/userpatches/ImmortalWrt/* $OPENWRT_PATH/
+        [ -e files ] && mv files $OPENWRT_PATH/files
+        # [ -e $CONFIG_FILE ] && mv $CONFIG_FILE $OPENWRT_PATH/.config
+        chmod +x $GITHUB_WORKSPACE/scripts/*.sh
+        chmod +x $DIY_SCRIPT
+        cd $OPENWRT_PATH
+        $GITHUB_WORKSPACE/$DIY_SCRIPT
+        $GITHUB_WORKSPACE/scripts/preset-clash-core.sh $CLASH_KERNEL
+        # $GITHUB_WORKSPACE/scripts/preset-adguard-core.sh $CLASH_KERNEL
 
     - name: 生成变量
       id: variable
@@ -159,21 +174,6 @@ jobs:
         ccache: false
         mixkey: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.DEVICE_TARGET }}-${{ env.DEVICE_SUBTARGET }}
         prefix: ${{ env.OPENWRT_PATH }}
-
-    - name: 加载自定义配置
-      run: |
-        df -hT
-        sudo chmod -R +w ./  # 确保当前目录可写
-        rsync -av --progress $GITHUB_WORKSPACE/userpatches/ImmortalWrt/ $OPENWRT_PATH/
-        # cp --preserve=all -r $GITHUB_WORKSPACE/userpatches/ImmortalWrt/* $OPENWRT_PATH/
-        [ -e files ] && mv files $OPENWRT_PATH/files
-        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE $OPENWRT_PATH/.config
-        chmod +x $GITHUB_WORKSPACE/scripts/*.sh
-        chmod +x $DIY_SCRIPT
-        cd $OPENWRT_PATH
-        $GITHUB_WORKSPACE/$DIY_SCRIPT
-        $GITHUB_WORKSPACE/scripts/preset-clash-core.sh $CLASH_KERNEL
-        # $GITHUB_WORKSPACE/scripts/preset-adguard-core.sh $CLASH_KERNEL
 
     - name: 安装订阅源
       run: |
@@ -251,8 +251,8 @@ jobs:
           - ⚽ 固件源码: ${{ env.REPO_URL }}
           - 💝 源码分支: ${{ env.REPO_BRANCH }}
           - 🚀 内核版本: ${{ env.KERNEL }}
-          - 🌐 默认地址: 192.168.1.1
-          - 🔑 默认密码: password
+          - 🌐 默认地址: 10.0.0.1
+          - 🔑 默认密码: 
           ### 🧊 固件版本
           - 固件编译前最后一次➦[主源码](${{ env.REPO_URL }})更新记录
           - ${{ env.COMMIT_AUTHOR }}

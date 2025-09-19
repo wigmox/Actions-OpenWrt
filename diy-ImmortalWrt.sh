@@ -29,7 +29,7 @@ sed -i '/^do_mount_root() {/a\	resize2fs /dev/mmcblk0p1\
 
 
 # firstboot 添加删除 overlay 目录命令
-sed -i '/^#!\/bin\/sh/a\rm -rf /overlay/*' package/base-files/files/sbin/firstboot
+# sed -i '/^#!\/bin\/sh/a\rm -rf /overlay/*' package/base-files/files/sbin/firstboot
 
 # boot Makefile 添加机型
 
@@ -159,13 +159,13 @@ TARGET_DEVICES += bdy_g18-pro" >> target/linux/rockchip/image/armv8.mk
 
 
 # 下载 openclash 内核文件 
-    mkdir target/linux/rockchip/armv8/base-files/etc/openclash/core
+    #mkdir target/linux/rockchip/armv8/base-files/etc/openclash/core
     # Download clash_meta
-    META_URL="https://raw.githubusercontent.com/vernesong/OpenClash/core/master/meta/clash-linux-arm64.tar.gz"
-    wget -qO- $META_URL | tar xOvz > target/linux/rockchip/armv8/base-files/etc/openclash/core/clash_meta
-    chmod +x target/linux/rockchip/armv8/base-files/etc/openclash/core/clash_meta
+    #META_URL="https://raw.githubusercontent.com/vernesong/OpenClash/core/master/meta/clash-linux-arm64.tar.gz"
+    #wget -qO- $META_URL | tar xOvz > target/linux/rockchip/armv8/base-files/etc/openclash/core/clash_meta
+    #chmod +x target/linux/rockchip/armv8/base-files/etc/openclash/core/clash_meta
     # Download GeoIP and GeoSite
-    wget -q https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat -O target/linux/rockchip/armv8/base-files/etc/openclash/GeoIP.dat
+    #wget -q https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat -O target/linux/rockchip/armv8/base-files/etc/openclash/GeoIP.dat
     # wget -q https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat -O target/linux/rockchip/armv8/base-files/etc/openclash/GeoSite.dat
 
 # 拉取仓库文件夹
@@ -177,7 +177,7 @@ merge_package() {
 	# merge_package master https://github.com/lisaac/luci-app-dockerman package/lean applications/luci-app-dockerman
 	
 	# 应用过滤（OpenAppFilter）
-	merge_package master https://github.com/destan19/OpenAppFilter package/OpenAppFilter luci-app-oaf oaf open-app-filter
+	# merge_package master https://github.com/destan19/OpenAppFilter package/OpenAppFilter luci-app-oaf oaf open-app-filter
 	
 	if [[ $# -lt 3 ]]; then
 		echo "Syntax error: [$#] [$*]" >&2
