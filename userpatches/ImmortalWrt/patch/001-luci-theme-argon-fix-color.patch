@@ -1,0 +1,35 @@
+diff --git a/feeds/luci/themes/luci-theme-argon/htdocs/luci-static/argon/css/cascade.css b/feeds/luci/themes/luci-theme-argon/htdocs/luci-static/argon/css/cascade.css
+
+--- a/feeds/luci/themes/luci-theme-argon/htdocs/luci-static/argon/css/cascade.css
++++ b/feeds/luci/themes/luci-theme-argon/htdocs/luci-static/argon/css/cascade.css
+@@ -1363,19 +1363,17 @@ footer > a {
+ }
+ .alert,
+ .alert-message {
+-  position: fixed;
+-  width: 20rem;
++  margin-bottom: 1.25rem;
+   z-index: 9000;
+   left: 50%;
+   top: 50%;
+-  transform: translate(-50%, -50%);
+   font-weight: bold;
+   padding: 1rem 1.25rem;
+   border: 0;
+   border-radius: 0.25rem !important;
+   background-color: #fff;
+   box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.16), 0 0 2px 0 rgba(0, 0, 0, 0.12);
+-  text-shadow: none;
++  text-shadow: 1px 1px rgba(0, 0, 0, 0.1);
+ }
+ .modal.alert-message {
+   position: static;
+@@ -1389,7 +1387,7 @@ footer > a {
+ }
+ .alert.error,
+ .alert-message.error {
+-  background-color: var(--warning);
++  background-color: var(--yellow);
+ }
+ .alert h4,
+ .alert-message h4 {

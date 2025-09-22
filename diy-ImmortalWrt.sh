@@ -251,3 +251,9 @@ git clone --depth=1 https://github.com/sirpdboy/luci-app-eqosplus package/luci-a
 
 # 添加 gen_image_generic.sh 运行权限
 chmod +x scripts/gen_image_generic.sh
+
+# 打上 patch 目录下的补丁
+# 使用git apply 循环处理
+for patch_file in patch/*.patch; do
+    git apply --check "$patch_file" && git apply "$patch_file"
+done

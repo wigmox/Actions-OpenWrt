@@ -135,34 +135,13 @@ jobs:
         echo "COMMIT_HASH=$COMMIT_HASH" >> $GITHUB_ENV
         echo "COMMIT_HASH=$COMMIT_HASH" >> $GITHUB_OUTPUT
 
-    - name: 加载自定义配置
-      run: |
-        df -hT
-        # 确保当前目录可写
-        sudo chmod -R +w ./
-        
-        # 复制自定义机型配置文件到源码根目录
-        rsync -av --progress $GITHUB_WORKSPACE/userpatches/ImmortalWrt/ $OPENWRT_PATH/
-        # cp --preserve=all -r $GITHUB_WORKSPACE/userpatches/ImmortalWrt/* $OPENWRT_PATH/
-        
-        # 复制
-        [ -e files ] && mv files $OPENWRT_PATH/files
-        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE $OPENWRT_PATH/.config
-        chmod +x $GITHUB_WORKSPACE/scripts/*.sh
-        chmod +x $DIY_SCRIPT
-        cd $OPENWRT_PATH
-        $GITHUB_WORKSPACE/$DIY_SCRIPT
-        $GITHUB_WORKSPACE/scripts/preset-clash-core.sh $CLASH_KERNEL
-        # $GITHUB_WORKSPACE/scripts/preset-adguard-core.sh $CLASH_KERNEL
-        echo 列出 package/ 目录文件
-        ls package/
-
     - name: 生成变量
       id: variable
       run: |
         df -hT
         # 复制 .config 文件到源码根目录
         # cp $CONFIG_FILE $OPENWRT_PATH/.config
+        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE $OPENWRT_PATH/.config
         cd $OPENWRT_PATH
         # make defconfig > /dev/null 2>&1
         
@@ -189,6 +168,12 @@ jobs:
         mixkey: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.DEVICE_TARGET }}-${{ env.DEVICE_SUBTARGET }}
         prefix: ${{ env.OPENWRT_PATH }}
 
+    - name: 加载自定义 feed 配置
+      run: |
+        # chmod +x $DIY_SCRIPT
+        # cd $OPENWRT_PATH
+        # $GITHUB_WORKSPACE/$DIY_SCRIPT
+
     - name: 安装订阅源
       run: |
         df -hT
@@ -204,6 +189,26 @@ jobs:
         make download -j8
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;
+
+    - name: 加载自定义配置
+      run: |
+        df -hT
+        # 确保当前目录可写
+        sudo chmod -R +w ./
+        
+        # 复制自定义机型配置文件到源码根目录
+        rsync -av --progress $GITHUB_WORKSPACE/userpatches/ImmortalWrt/ $OPENWRT_PATH/
+        # cp --preserve=all -r $GITHUB_WORKSPACE/userpatches/ImmortalWrt/* $OPENWRT_PATH/
+        
+        # 复制
+        [ -e files ] && mv files $OPENWRT_PATH/files
+        # [ -e $CONFIG_FILE ] && mv $CONFIG_FILE $OPENWRT_PATH/.config
+        chmod +x $GITHUB_WORKSPACE/scripts/*.sh
+        chmod +x $DIY_SCRIPT
+        cd $OPENWRT_PATH
+        $GITHUB_WORKSPACE/$DIY_SCRIPT
+        $GITHUB_WORKSPACE/scripts/preset-clash-core.sh $CLASH_KERNEL
+        # $GITHUB_WORKSPACE/scripts/preset-adguard-core.sh $CLASH_KERNEL
 
     - name: 编译固件
       id: compile
