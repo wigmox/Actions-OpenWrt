@@ -8,48 +8,50 @@ on:
 
     inputs:
 
-      board:
+      BOARD:
         description: '设备型号'
         required: true
+        default: 'g68-plus'
         type: choice
         options:
           - g68-plus
           - g18-pro
           - g16-plus
-        default: "g68-plus"
-
-      branch:
+          
+      SYSTEM:
         description: '系统分支'
         required: true
+        default: 'immortalwrt'
         type: choice
         options:
           - OpenWrt
           - immortalwrt
           - istoreos
           - LEDE
-        default: "immortalwrt"
-
-      version:
+        
+      BRANCH:
         description: '系统版本 (带 .y 匹配最新 tag)'
         required: true
+        default: 'openwrt-24.10'
         type: choice
         options:
           - openwrt-24.10
           - 24.10.2
           - main
-        default: "openwrt-24.10"
-
+          
 env:
-  REPO_URL: https://github.com/immortalwrt/${{ inputs.branch }}
-  REPO_BRANCH: ${{ inputs.version }}
-  CONFIG_FILE: userpatches/ImmortalWrt/defconfig/${{ inputs.board }}_mtk_wifi.config
-  CONFIG_FILE2: userpatches/${{ inputs.branch }}/defconfig/${{ inputs.board }}.config
-  DIY_SCRIPT: diy-ImmortalWrt.sh
+  REPO_URL: https://github.com/immortalwrt/immortalwrt
+  REPO_BRANCH: ${{ inputs.BRANCH }}
+  CONFIG_FILE: userpatches/${{ inputs.SYSTEM }}/defconfig/${{ inputs.BOARD }}_mtk_wifi.config
+  DIY_SCRIPT1: diy-part1.sh
+  DIY_SCRIPT2: diy-immortalwrt.sh
+  DIY_P1_SH: $GITHUB_WORKSPACE/scripts/${{ inputs.SYSTEM }}/diy-part1.sh
+  DIY_P2_SH: $GITHUB_WORKSPACE/scripts/${{ inputs.SYSTEM }}/diy-part2.sh
   CLASH_KERNEL: arm64
   CACHE_TOOLCHAIN: true
   UPLOAD_BIN_DIR: false
   FIRMWARE_RELEASE: true
-  FIRMWARE_TAG: ${{ inputs.branch }}-${{ inputs.board }}
+  FIRMWARE_TAG: ${{ inputs.SYSTEM }}-${{ inputs.BOARD }}
   TZ: Asia/Shanghai
   GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
 
@@ -73,13 +75,14 @@ jobs:
         temp-reserve-mb: 100
         root-reserve-mb: 1024
 
-    - name: 检出
+    - name: 准备完成
       uses: actions/checkout@main
 
     - name: 创建工作目录
       run: |
         mkdir -p ${GITHUB_WORKSPACE}/workdir
         chmod 755 ${GITHUB_WORKSPACE}/workdir
+        sudo chown $USER:$GROUPS ${GITHUB_WORKSPACE}/workdir
         echo "WORKDIR=$PWD" >> $GITHUB_ENV
 
     - name: 检查服务器性能
@@ -102,23 +105,29 @@ jobs:
         DEBIAN_FRONTEND: noninteractive
       run: |
         df -hT
-        # docker rmi $(docker images -q)
-        sudo rm -rf /usr/share/dotnet /etc/apt/sources.list.d /usr/local/lib/android $AGENT_TOOLSDIRECTORY
-        sudo -E apt-get -y purge azure-cli ghc* zulu* llvm* firefox google* dotnet* powershell openjdk* mongodb* moby* || true
-        sudo -E apt-get -y update
-        sudo -E apt-get -y install $(curl -fsSL is.gd/depends_ubuntu_2204)
+        echo "------------------------------- 更新并安装依赖 -------------------------------"
+        sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /etc/mysql /etc/php /usr/local/lib/android /opt/ghc $AGENT_TOOLSDIRECTORY
+        sudo -E apt-get -qq update
+        sudo -E apt-get -qq install $(curl -fsSL is.gd/depends_ubuntu_2204)
         sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+        sudo python3 get-pip.py
+        sudo rm -rf get-pip.py
+        sudo pip install pyelftools
+        echo "------------------------------- 清理Docker镜像和软件 -------------------------------"
+        docker rmi `docker images -q`
+        docker image prune -a -f
         sudo -E systemctl daemon-reload
-        sudo -E apt-get -y autoremove --purge
-        sudo -E apt-get -y clean
+        sudo -E apt-get -y purge azure-cli ghc* zulu* hhvm llvm* firefox google* dotnet* powershell openjdk* adoptopenjdk* mysql* php* mongodb* dotnet* moby* snapd* android* || true
+        sudo -E apt-get -qq autoremove --purge
+        sudo -E apt-get -qq clean
+        echo "------------------------------- 设置工作目录及时区 -------------------------------"
         sudo timedatectl set-timezone "$TZ"
 
-    - name: 克隆源代码-${{ inputs.branch }}-${{ inputs.version }}
+    - name: 克隆源代码-${{ inputs.SYSTEM }}-${{ inputs.BRANCH }}
       working-directory: ${{ env.WORKDIR }}/workdir
       id: clone
       run: |
-        #df -hT $GITHUB_WORKSPACE
-        df -hT
+        df -hT $GITHUB_WORKSPACE
         git clone $REPO_URL -b $REPO_BRANCH openwrt
         cd openwrt
         echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
@@ -138,10 +147,10 @@ jobs:
     - name: 生成变量
       id: variable
       run: |
-        df -hT
+        # df -hT
         # 复制 .config 文件到源码根目录
         # cp $CONFIG_FILE $OPENWRT_PATH/.config
-        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE $OPENWRT_PATH/.config
+        # [ -e $CONFIG_FILE ] && mv $CONFIG_FILE $OPENWRT_PATH/.config
         cd $OPENWRT_PATH
         # make defconfig > /dev/null 2>&1
         
@@ -168,52 +177,63 @@ jobs:
         mixkey: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.DEVICE_TARGET }}-${{ env.DEVICE_SUBTARGET }}
         prefix: ${{ env.OPENWRT_PATH }}
 
-    - name: 加载自定义 feed 配置
+    - name: 加载自定义 feeds
       run: |
-        # chmod +x $DIY_SCRIPT
-        # cd $OPENWRT_PATH
-        # $GITHUB_WORKSPACE/$DIY_SCRIPT
-
-    - name: 安装订阅源
-      run: |
-        df -hT
+        chmod +x $DIY_P1_SH
         cd $OPENWRT_PATH
-        ./scripts/feeds update -a
-        ./scripts/feeds install -a
+        $GITHUB_WORKSPACE/$DIY_P1_SH
 
-    - name: 下载 DL 包
+    - name: 更新 feeds
+      run: cd $OPENWRT_PATH && ./scripts/feeds update -a
+
+    - name: 安装 feeds
+      run: cd $OPENWRT_PATH && ./scripts/feeds install -a
+
+    - name: 加载配置文件
+      id: load-config
       run: |
-        df -hT
+        cd $OPENWRT_PATH
+        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE $OPENWRT_PATH/.config
+
+    - name: 进行编译配置
+      id: make-compile-config
+      run: |
+        cd $OPENWRT_PATH
+        make defconfig
+
+    - name: 加载自定义配置
+      run: |
+        # 复制自定义机型配置文件到源码根目录
+        rsync -av --progress $GITHUB_WORKSPACE/userpatches/immortalwrt/ $OPENWRT_PATH/
+        # cp --preserve=all -r $GITHUB_WORKSPACE/userpatches/immortalwrt/* $OPENWRT_PATH/
+        
+        # 复制
+        # [ -e files ] && mv files $OPENWRT_PATH/files
+        
+        # 加载自定义配置
+        chmod +x $DIY_P2_SH
+        cd $OPENWRT_PATH
+        $GITHUB_WORKSPACE/$DIY_P2_SH
+        
+        # 加载通用自定义脚本
+        chmod +x $GITHUB_WORKSPACE/scripts/*.sh
+        # 下载 clash core
+        $GITHUB_WORKSPACE/scripts/preset-clash-core.sh $CLASH_KERNEL
+        # 下载 adguard core
+        # $GITHUB_WORKSPACE/scripts/preset-adguard-core.sh $CLASH_KERNEL
+
+    - name: 下载软件包
+      id: package
+      run: |
         cd $OPENWRT_PATH
         make defconfig
         make download -j8
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;
 
-    - name: 加载自定义配置
-      run: |
-        df -hT
-        # 确保当前目录可写
-        sudo chmod -R +w ./
-        
-        # 复制自定义机型配置文件到源码根目录
-        rsync -av --progress $GITHUB_WORKSPACE/userpatches/ImmortalWrt/ $OPENWRT_PATH/
-        # cp --preserve=all -r $GITHUB_WORKSPACE/userpatches/ImmortalWrt/* $OPENWRT_PATH/
-        
-        # 复制
-        [ -e files ] && mv files $OPENWRT_PATH/files
-        # [ -e $CONFIG_FILE ] && mv $CONFIG_FILE $OPENWRT_PATH/.config
-        chmod +x $GITHUB_WORKSPACE/scripts/*.sh
-        chmod +x $DIY_SCRIPT
-        cd $OPENWRT_PATH
-        $GITHUB_WORKSPACE/$DIY_SCRIPT
-        $GITHUB_WORKSPACE/scripts/preset-clash-core.sh $CLASH_KERNEL
-        # $GITHUB_WORKSPACE/scripts/preset-adguard-core.sh $CLASH_KERNEL
-
     - name: 编译固件
       id: compile
       run: |
-        df -hT
         cd $OPENWRT_PATH
         mkdir -p files/etc/uci-defaults
         cp $GITHUB_WORKSPACE/scripts/init-settings.sh files/etc/uci-defaults/99-init-settings
@@ -229,8 +249,8 @@ jobs:
       run: df -hT
 
     - name: 上传固件
-      if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
       uses: actions/upload-artifact@main
+      if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
       with:
         name: ${{ env.SOURCE_REPO }}-bin-${{ env.DEVICE_TARGET }}-${{ env.DEVICE_SUBTARGET }}-${{ env.FILE_DATE }}
         path: ${{ env.OPENWRT_PATH }}/bin
