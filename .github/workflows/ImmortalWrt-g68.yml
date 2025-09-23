@@ -168,9 +168,12 @@ jobs:
 
     - name: 加载自定义配置
       run: |
+        df -hT
+        # 确保当前目录可写
+        sudo chmod -R +w ./
         # 复制自定义机型配置文件到源码根目录
-        rsync -av --progress $GITHUB_WORKSPACE/userpatches/immortalwrt/ $OPENWRT_PATH/
-        # cp --preserve=all -r $GITHUB_WORKSPACE/userpatches/immortalwrt/* $OPENWRT_PATH/
+        rsync -av --progress $GITHUB_WORKSPACE/userpatches/${{ inputs.SYSTEM }}/ $OPENWRT_PATH/
+        # cp --preserve=all -r $GITHUB_WORKSPACE/userpatches/${{ inputs.SYSTEM }}/* $OPENWRT_PATH/
         
         # 复制
         # [ -e files ] && mv files $OPENWRT_PATH/files
