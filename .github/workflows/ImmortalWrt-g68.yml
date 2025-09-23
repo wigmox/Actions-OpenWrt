@@ -45,8 +45,8 @@ env:
   CONFIG_FILE: userpatches/${{ inputs.SYSTEM }}/defconfig/${{ inputs.BOARD }}_mtk_wifi.config
   DIY_SCRIPT1: diy-part1.sh
   DIY_SCRIPT2: diy-immortalwrt.sh
-  DIY_P1_SH: $GITHUB_WORKSPACE/scripts/${{ inputs.SYSTEM }}/diy-part1.sh
-  DIY_P2_SH: $GITHUB_WORKSPACE/scripts/${{ inputs.SYSTEM }}/diy-part2.sh
+  DIY_P1_SH: scripts/${{ inputs.SYSTEM }}/diy-part1.sh
+  DIY_P2_SH: scripts/${{ inputs.SYSTEM }}/diy-part2.sh
   CLASH_KERNEL: arm64
   CACHE_TOOLCHAIN: true
   UPLOAD_BIN_DIR: false
