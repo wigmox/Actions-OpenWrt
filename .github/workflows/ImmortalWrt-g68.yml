@@ -100,30 +100,6 @@ jobs:
         echo "--------------------------硬盘信息--------------------------"
         echo "硬盘数量: $(ls /dev/sd* | grep -v [1-9] | wc -l)" && df -hT
 
-    - name: 初始化环境
-      env:
-        DEBIAN_FRONTEND: noninteractive
-      run: |
-        df -hT
-        echo "------------------------------- 更新并安装依赖 -------------------------------"
-        sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc $AGENT_TOOLSDIRECTORY
-        sudo -E apt-get -qq update
-        sudo -E apt-get -qq install $(curl -fsSL is.gd/depends_ubuntu_2204)
-        wget https://bootstrap.pypa.io/pip/3.6/get-pip.py
-        sudo python3 get-pip.py
-        sudo rm -rf get-pip.py
-        sudo pip install pyelftools
-        sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
-        echo "------------------------------- 清理Docker镜像和软件 -------------------------------"
-        docker rmi `docker images -q`
-        docker image prune -a -f
-        sudo -E systemctl daemon-reload
-        sudo -E apt-get -y purge azure-cli ghc* zulu* hhvm llvm* firefox google* dotnet* powershell openjdk* adoptopenjdk* php* mongodb* dotnet* moby* snapd* android* || true
-        sudo -E apt-get -qq autoremove --purge
-        sudo -E apt-get -qq clean
-        echo "------------------------------- 设置工作目录及时区 -------------------------------"
-        sudo timedatectl set-timezone "$TZ"
-
     - name: 克隆源代码-${{ inputs.SYSTEM }}-${{ inputs.BRANCH }}
       working-directory: ${{ env.WORKDIR }}/workdir
       id: clone
@@ -160,12 +136,12 @@ jobs:
         echo "SOURCE_REPO=$SOURCE_REPO" >> $GITHUB_ENV
         
         # 读取 CPU 信息
-        DEVICE_TARGET=$(cat .config | grep CONFIG_TARGET_BOARD | awk -F '"' '{print $2}')
+        DEVICE_TARGET=$(cat $CONFIG_FILE | grep CONFIG_TARGET_BOARD | awk -F '"' '{print $2}')
         echo "DEVICE_TARGET=$DEVICE_TARGET" >> $GITHUB_ENV
         echo "DEVICE_TARGET=$DEVICE_TARGET" >> $GITHUB_OUTPUT
         
         # 读取 CPU 架构
-        DEVICE_SUBTARGET=$(cat .config | grep CONFIG_TARGET_SUBTARGET | awk -F '"' '{print $2}')
+        DEVICE_SUBTARGET=$(cat $CONFIG_FILE | grep CONFIG_TARGET_SUBTARGET | awk -F '"' '{print $2}')
         echo "DEVICE_SUBTARGET=$DEVICE_SUBTARGET" >> $GITHUB_ENV
         echo "DEVICE_SUBTARGET=$DEVICE_SUBTARGET" >> $GITHUB_OUTPUT
 
@@ -190,18 +166,6 @@ jobs:
     - name: 安装 feeds
       run: cd $OPENWRT_PATH && ./scripts/feeds install -a
 
-    - name: 加载配置文件
-      id: load-config
-      run: |
-        cd $OPENWRT_PATH
-        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE $OPENWRT_PATH/.config
-
-    - name: 进行编译配置
-      id: make-compile-config
-      run: |
-        cd $OPENWRT_PATH
-        make defconfig
-
     - name: 加载自定义配置
       run: |
         # 复制自定义机型配置文件到源码根目录
@@ -222,6 +186,43 @@ jobs:
         $GITHUB_WORKSPACE/scripts/preset-clash-core.sh $CLASH_KERNEL
         # 下载 adguard core
         # $GITHUB_WORKSPACE/scripts/preset-adguard-core.sh $CLASH_KERNEL
+
+    - name: 加载配置文件
+      id: load-config
+      run: |
+        # cd $OPENWRT_PATH
+        
+        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE $OPENWRT_PATH/.config
+
+    - name: 进行编译配置
+      id: make-compile-config
+      run: |
+        cd $OPENWRT_PATH
+        make defconfig
+
+    - name: 初始化环境
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        df -hT
+        echo "------------------------------- 更新并安装依赖 -------------------------------"
+        sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc $AGENT_TOOLSDIRECTORY
+        sudo -E apt-get -qq update
+        sudo -E apt-get -qq install $(curl -fsSL is.gd/depends_ubuntu_2204)
+        wget https://bootstrap.pypa.io/pip/3.6/get-pip.py
+        sudo python3 get-pip.py
+        sudo rm -rf get-pip.py
+        sudo pip install pyelftools
+        sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+        echo "------------------------------- 清理Docker镜像和软件 -------------------------------"
+        docker rmi `docker images -q`
+        docker image prune -a -f
+        sudo -E systemctl daemon-reload
+        sudo -E apt-get -y purge azure-cli ghc* zulu* hhvm llvm* firefox google* dotnet* powershell openjdk* adoptopenjdk* php* mongodb* dotnet* moby* snapd* android* || true
+        sudo -E apt-get -qq autoremove --purge
+        sudo -E apt-get -qq clean
+        echo "------------------------------- 设置工作目录及时区 -------------------------------"
+        sudo timedatectl set-timezone "$TZ"
 
     - name: 下载软件包
       id: package
