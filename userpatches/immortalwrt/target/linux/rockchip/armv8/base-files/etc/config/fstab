@@ -6,7 +6,7 @@ config global
 	option delay_root '5'
 	option check_fs '0'
 
-config mount overlay
+config mount boot
         option target '/boot'
         option label 'kernel'
         option options 'rw,noatime'

@@ -24,10 +24,10 @@ on:
         default: 'immortalwrt'
         type: choice
         options:
-          - OpenWrt
+          - openwrt
           - immortalwrt
           - istoreos
-          - LEDE
+          - lede
         
       BRANCH:
         description: '系统版本 (带 .y 匹配最新 tag)'
@@ -36,12 +36,14 @@ on:
         type: choice
         options:
           - openwrt-24.10
+          - 24.10.1
           - 24.10.2
+          - 24.10.y
           - main
           
 env:
   REPO_URL: https://github.com/immortalwrt/immortalwrt
-  REPO_BRANCH: ${{ inputs.BRANCH }}
+  #REPO_BRANCH: ${{ inputs.BRANCH }}
   CONFIG_FILE: userpatches/${{ inputs.SYSTEM }}/defconfig/${{ inputs.BOARD }}_mtk_wifi.config
   DIY_P1_SH: scripts/${{ inputs.SYSTEM }}/diy-part1.sh
   DIY_P2_SH: scripts/${{ inputs.SYSTEM }}/diy-part2.sh
@@ -56,6 +58,42 @@ env:
 jobs:
   Build:
     runs-on: ubuntu-22.04
+
+      - name: 判断要使用的  版本
+        id: version_selector
+        run: |
+          USER_CHOICE="${{ inputs.BRANCH }}"
+          REPO_BRANCH=""
+
+          # 判断用户选择的是否是动态版本 (以 .y 结尾)
+          if [[ "$USER_CHOICE" == *.y ]]; then
+            # 移除 .y 后缀，得到版本前缀, e.g., "v25.8"
+            VERSION_PREFIX=$(echo "$USER_CHOICE" | sed 's/\.y$//')
+            echo "用户选择了动态版本，开始查找前缀为 ${VERSION_PREFIX} 的最新 tag..."
+
+            # 从  远程仓库获取所有 tags，并按版本号逆序排序 (最新版本在最前面)
+            # 使用 `git ls-remote` 可以在不克隆整个仓库的情况下获取 tags，速度非常快
+            ALL_TAGS=$(git ls-remote --tags --sort='-v:refname' $REPO_URL)
+
+            # 1. 优先查找稳定版 (不含 "trunk")
+            # 格式类似: 24.10.1
+            LATEST_STABLE_TAG=$(echo "${ALL_TAGS}" | grep "refs/tags/${VERSION_PREFIX}" | grep -v "trunk" | head -n 1 | sed 's/.*\///')
+            
+            if [[ -n "$LATEST_STABLE_TAG" ]]; then
+              REPO_BRANCH="$LATEST_STABLE_TAG"
+              echo "找到最新的稳定版 tag: ${REPO_BRANCH}"
+                echo "::error:: 无法为前缀 ${VERSION_PREFIX} 找到任何匹配的 tag！"
+                exit 1
+              fi
+            fi
+          else
+            # 如果用户选择的是一个固定版本 (如 24.10.1 或 main)，直接使用
+            REPO_BRANCH="$USER_CHOICE"
+            echo "用户选择了固定版本: ${REPO_BRANCH}"
+          fi
+
+          # 将最终确定的版本号输出到 GITHUB_ENV，供后续步骤使用
+          echo "REPO_BRANCH=${REPO_BRANCH}" >> $GITHUB_ENV
 
     outputs:
       COMMIT_AUTHOR: ${{ steps.clone.outputs.COMMIT_AUTHOR }}
@@ -127,9 +165,16 @@ jobs:
       id: clone
       run: |
         df -hT $GITHUB_WORKSPACE
+        git clone -q --single-branch --depth=1 --branch=${{ env.REPO_BRANCH }} $REPO_URL openwrt
         git clone $REPO_URL -b $REPO_BRANCH openwrt
         cd openwrt
         echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
+
+    - name: 设置源代码变量
+      # working-directory: ${{ env.WORKDIR }}/workdir
+      id: setenv
+      run: |
+        cd $OPENWRT_PATH
         COMMIT_AUTHOR=$(git show -s --date=short --format="作者: %an")
         echo "COMMIT_AUTHOR=$COMMIT_AUTHOR" >> $GITHUB_ENV
         echo "COMMIT_AUTHOR=$COMMIT_AUTHOR" >> $GITHUB_OUTPUT
@@ -166,6 +211,9 @@ jobs:
         DEVICE_SUBTARGET=$(cat $CONFIG_FILE | grep CONFIG_TARGET_SUBTARGET | awk -F '"' '{print $2}')
         echo "DEVICE_SUBTARGET=$DEVICE_SUBTARGET" >> $GITHUB_ENV
         echo "DEVICE_SUBTARGET=$DEVICE_SUBTARGET" >> $GITHUB_OUTPUT
+
+    - name: 显示变量
+      run: env
 
     - name: 缓存工具链
       if: env.CACHE_TOOLCHAIN == 'true'
