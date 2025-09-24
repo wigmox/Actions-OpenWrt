@@ -119,12 +119,21 @@ jobs:
           ALL_TAGS=$(git ls-remote --tags --sort='-v:refname' $REPO_URL)
 
           # 格式类似: v24.10.1
-          LATEST_STABLE_TAG=$(echo "${ALL_TAGS}" | grep "refs/tags/${VERSION_PREFIX}" |head -n 1 | sed 's/.*\///')
+          LATEST_STABLE_TAG=$(echo "${ALL_TAGS}" | grep "refs/tags/${VERSION_PREFIX}" | grep -v "trunk" | head -n 1 | sed 's/.*\///')
           
           if [[ -n "$LATEST_STABLE_TAG" ]]; then
             REPO_BRANCH="$LATEST_STABLE_TAG"
             echo "找到最新的稳定版 tag: ${REPO_BRANCH}"
           else
+            # 2. 如果没有稳定版，则查找最新的 trunk 版
+            # 格式类似: v25.8.0-trunk.1, v25.8.0-trunk.2
+            echo "未找到 ${VERSION_PREFIX} 系列的稳定版，开始查找最新的 trunk 版..."
+            LATEST_TRUNK_TAG=$(echo "${ALL_TAGS}" | grep "refs/tags/${VERSION_PREFIX}" | grep "trunk" | head -n 1 | sed 's/.*\///')
+
+            if [[ -n "$LATEST_TRUNK_TAG" ]]; then
+              ARMBIAN_VERSION="$LATEST_TRUNK_TAG"
+              echo "找到最新的 trunk 版 tag: ${ARMBIAN_VERSION}"
+            else
               echo "::error:: 无法为前缀 ${VERSION_PREFIX} 找到任何匹配的 tag！"
               exit 1
             fi
