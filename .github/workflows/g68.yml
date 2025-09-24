@@ -48,14 +48,14 @@ env:
   SYSTEM: ${{ inputs.SYSTEM || 'immortalwrt'}}
   REPO_BRANCH: ${{ inputs.BRANCH || 'openwrt-24.10'}}
   REPO_URL: https://github.com/immortalwrt/immortalwrt
-  CONFIG_FILE: userpatches/$SYSTEM/defconfig/$BOARD_mtk_wifi.config
-  DIY_P1_SH: scripts/$SYSTEM/diy-part1.sh
-  DIY_P2_SH: scripts/$SYSTEM/diy-part2.sh
+  CONFIG_FILE: userpatches/${{ inputs.SYSTEM || 'immortalwrt'}}/defconfig/${{ inputs.BOARD || 'g68-plus'}}_mtk_wifi.config
+  DIY_P1_SH: scripts/${{ inputs.SYSTEM || 'immortalwrt'}}/diy-part1.sh
+  DIY_P2_SH: scripts/${{ inputs.SYSTEM || 'immortalwrt'}}/diy-part2.sh
   CLASH_KERNEL: arm64
   CACHE_TOOLCHAIN: true
   UPLOAD_BIN_DIR: false
   FIRMWARE_RELEASE: true
-  FIRMWARE_TAG: $SYSTEM-$BOARD
+  FIRMWARE_TAG: ${{ inputs.SYSTEM || 'immortalwrt'}}-${{ inputs.BOARD || 'g68-plus'}}
   TZ: Asia/Shanghai
   GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
 
