@@ -1,4 +1,4 @@
-name: ImmortalWrt-g68-test
+name: ImmortalWrt-g68
 
 on:
   schedule:
@@ -48,14 +48,14 @@ env:
   SYSTEM: ${{ inputs.SYSTEM || 'immortalwrt'}}
   REPO_BRANCH: ${{ inputs.BRANCH || 'openwrt-24.10'}}
   REPO_URL: https://github.com/immortalwrt/immortalwrt
-  CONFIG_FILE: userpatches/${{ env.SYSTEM }}/defconfig/${{ env.BOARD }}_mtk_wifi.config
-  DIY_P1_SH: scripts/${{ env.SYSTEM }}/diy-part1.sh
-  DIY_P2_SH: scripts/${{ env.SYSTEM }}/diy-part2.sh
+  CONFIG_FILE: userpatches/$SYSTEM/defconfig/$BOARD_mtk_wifi.config
+  DIY_P1_SH: scripts/$SYSTEM/diy-part1.sh
+  DIY_P2_SH: scripts/$SYSTEM/diy-part2.sh
   CLASH_KERNEL: arm64
   CACHE_TOOLCHAIN: true
   UPLOAD_BIN_DIR: false
   FIRMWARE_RELEASE: true
-  FIRMWARE_TAG: ${{ env.SYSTEM }}-${{ env.BOARD }}
+  FIRMWARE_TAG: $SYSTEM-$BOARD
   TZ: Asia/Shanghai
   GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
 
@@ -165,12 +165,12 @@ jobs:
         echo "------------------------------- 设置工作目录及时区 -------------------------------"
         sudo timedatectl set-timezone "$TZ"
 
-    - name: 克隆源代码-${{ env.SYSTEM }}-${{ env.REPO_BRANCH }}
+    - name: 克隆源代码-$SYSTEM-$BRANCH
       working-directory: ${{ env.WORKDIR }}/workdir
       id: clone
       run: |
         df -hT $GITHUB_WORKSPACE
-        git clone -q --single-branch --depth=1 --branch=${{ env.REPO_BRANCH }} $REPO_URL openwrt
+        git clone -q --single-branch --depth=1 --branch=$REPO_BRANCH $REPO_URL openwrt
         # git clone $REPO_URL -b $REPO_BRANCH openwrt
         cd openwrt
         echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
@@ -226,7 +226,7 @@ jobs:
       with:
         # 检查是否缓存 ccache
         ccache: false
-        mixkey: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.DEVICE_TARGET }}-${{ env.DEVICE_SUBTARGET }}
+        mixkey: ${{ env.SOURCE_REPO }}-$REPO_BRANCH-${{ env.DEVICE_TARGET }}-${{ env.DEVICE_SUBTARGET }}
         prefix: ${{ env.OPENWRT_PATH }}
 
     - name: 加载自定义 feeds
@@ -247,8 +247,8 @@ jobs:
         # 确保当前目录可写
         sudo chmod -R +w ./
         # 复制自定义机型配置文件到源码根目录
-        rsync -av --progress $GITHUB_WORKSPACE/userpatches/${{ env.SYSTEM }}/ $OPENWRT_PATH/
-        # cp --preserve=all -r $GITHUB_WORKSPACE/userpatches/${{ env.SYSTEM }}/* $OPENWRT_PATH/
+        rsync -av --progress $GITHUB_WORKSPACE/userpatches/$SYSTEM/ $OPENWRT_PATH/
+        # cp --preserve=all -r $GITHUB_WORKSPACE/userpatches/$SYSTEM/* $OPENWRT_PATH/
         
         # 复制
         # [ -e files ] && mv files $OPENWRT_PATH/files
@@ -344,7 +344,7 @@ jobs:
           ### 📒 固件信息
           - 💻 平台架构: ${{ env.DEVICE_TARGET }}-${{ env.DEVICE_SUBTARGET }} (rk33xx, rk35xx)
           - ⚽ 固件源码: ${{ env.REPO_URL }}
-          - 💝 源码分支: ${{ env.REPO_BRANCH }}
+          - 💝 源码分支: $REPO_BRANCH
           - 🚀 内核版本: ${{ env.KERNEL }}
           - 🌐 默认地址: 10.0.0.1
           - 🔑 默认密码: 
