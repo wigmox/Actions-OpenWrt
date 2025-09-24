@@ -16,7 +16,10 @@ sed -i 's/192.168.1.1/10.0.0.1/g' package/base-files/files/bin/config_generate
 # sed -i 's/\/bin\/ash/\/usr\/bin\/zsh/g' package/base-files/files/etc/passwd
 
 # TTYD 免登录
-# sed -i 's|/bin/login|/bin/login -f root|g' feeds/packages/utils/ttyd/files/ttyd.config
+sed -i 's|/bin/login|/bin/login -f root|g' feeds/packages/utils/ttyd/files/ttyd.config
+
+# 修改软件源
+sed -i 's|https://mirrors.vsean.net/openwrt|https://mirrors.pku.edu.cn/immortalwrt|g' package/emortal/default-settings/files/99-default-settings-chinese
 
 # 80_mount_root 添加挂载目录
 # 这个脚本用于在package/base-files/files/lib/preinit/80_mount_root文件中的do_mount_root函数内添加resize2fs命令
@@ -168,51 +171,6 @@ TARGET_DEVICES += bdy_g18-pro" >> target/linux/rockchip/image/armv8.mk
     #wget -q https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat -O target/linux/rockchip/armv8/base-files/etc/openclash/GeoIP.dat
     # wget -q https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat -O target/linux/rockchip/armv8/base-files/etc/openclash/GeoSite.dat
 
-# 拉取仓库文件夹
-merge_package() {
-	# 参数1是分支名,参数2是库地址,参数3是所有文件下载到指定路径。
-	# 同一个仓库下载多个文件夹直接在后面跟文件名或路径，空格分开。
-	# 示例:
-	# merge_package master https://github.com/WYC-2020/openwrt-packages package/openwrt-packages luci-app-eqos luci-app-openclash luci-app-ddnsto ddnsto 
-	# merge_package master https://github.com/lisaac/luci-app-dockerman package/lean applications/luci-app-dockerman
-	
-	# 应用过滤（OpenAppFilter）
-	merge_package master https://github.com/destan19/OpenAppFilter package/OpenAppFilter luci-app-oaf oaf open-app-filter
-	
-	if [[ $# -lt 3 ]]; then
-		echo "Syntax error: [$#] [$*]" >&2
-		return 1
-	fi
-	trap 'rm -rf "$tmpdir"' EXIT
-	branch="$1" curl="$2" target_dir="$3" && shift 3
-	rootdir="$PWD"
-	localdir="$target_dir"
-	[ -d "$localdir" ] || mkdir -p "$localdir"
-	tmpdir="$(mktemp -d)" || exit 1
-        echo "开始下载：$(echo $curl | awk -F '/' '{print $(NF)}')"
-	git clone -b "$branch" --depth 1 --filter=blob:none --sparse "$curl" "$tmpdir"
-	cd "$tmpdir"
-	git sparse-checkout init --cone
-	git sparse-checkout set "$@"
-	# 使用循环逐个移动文件夹
-	for folder in "$@"; do
-		mv -f "$folder" "$rootdir/$localdir"
-	done
-	cd "$rootdir"
-}
-ls package/
-
-
-# Git稀疏克隆，只克隆指定目录到本地
-function git_sparse_clone() {
-  branch="$1" repourl="$2" && shift 2
-  git clone --depth=1 -b $branch --single-branch --filter=blob:none --sparse $repourl
-  repodir=$(echo $repourl | awk -F '/' '{print $(NF)}')
-  cd $repodir && git sparse-checkout set $@
-  mv -f $@ ../package
-  cd .. && rm -rf $repodir
-}
-
 # Themes
 # git clone --depth=1 -b 18.06 https://github.com/jerrykuku/luci-theme-argon package/luci-theme-argon
 # git clone --depth=1 https://github.com/jerrykuku/luci-app-argon-config package/luci-app-argon-config
@@ -246,14 +204,15 @@ rm -rf feeds/luci/themes/luci-theme-argon/htdocs/luci-static/argon/background/*
 sed -i '/customized in this file/a net.netfilter.nf_conntrack_max=65535' package/base-files/files/etc/sysctl.conf
 
 
-# 定时限速插件
-git clone --depth=1 https://github.com/sirpdboy/luci-app-eqosplus package/luci-app-eqosplus
-
 # 添加 gen_image_generic.sh 运行权限
 chmod +x scripts/gen_image_generic.sh
 
 # 打上 patch 目录下的补丁
 # 使用git apply 循环处理
+echo :打 patch 目录下的补丁
 for patch_file in patch/*.patch; do
-    git apply --check "$patch_file" && git apply "$patch_file"
+    echo "Applying $patch_file using plaintext:"
+    git apply --stat "$patch_file"
+    git apply --check "$patch_file" || { echo "Error checking $patch_file"; continue; }
+    git apply "$patch_file" && echo "Applied successfully" || echo "Application failed"
 done
