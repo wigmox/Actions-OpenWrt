@@ -35,11 +35,11 @@ on:
         default: 'openwrt-24.10'
         type: choice
         options:
-          - openwrt-24.10
-          - 24.10.1
-          - 24.10.2
-          - 24.10.y
           - main
+          - openwrt-24.10
+          - v24.10.1
+          - v24.10.2
+          - v24.10.y
           
 env:
   REPO_URL: https://github.com/immortalwrt/immortalwrt
