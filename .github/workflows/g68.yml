@@ -1,0 +1,356 @@
+name: ImmortalWrt-g68
+
+on:
+  schedule:
+    - cron: '0 20 * * *'
+
+  workflow_dispatch:
+
+    inputs:
+
+      BOARD:
+        description: '设备型号'
+        required: true
+        default: 'g68-plus'
+        type: choice
+        options:
+          - g68-plus
+          - g18-pro
+          - g16-plus
+          
+      SYSTEM:
+        description: '系统分支'
+        required: true
+        default: 'immortalwrt'
+        type: choice
+        options:
+          - openwrt
+          - immortalwrt
+          - istoreos
+          - lede
+        
+      BRANCH:
+        description: '系统版本 (带 .y 匹配最新 tag)'
+        required: true
+        default: 'openwrt-24.10'
+        type: choice
+        options:
+          - main
+          - openwrt-24.10
+          - v24.10.1
+          - v24.10.2
+          - v24.10.3
+          - v24.10.4
+          - v24.10.y
+          
+env:
+  BOARD: ${{ inputs.BOARD || 'g68-plus'}}
+  SYSTEM: ${{ inputs.SYSTEM || 'immortalwrt'}}
+  REPO_BRANCH: ${{ inputs.BRANCH || 'openwrt-24.10'}}
+  REPO_URL: https://github.com/immortalwrt/immortalwrt
+  CONFIG_FILE: userpatches/${{ env.SYSTEM }}/defconfig/${{ env.BOARD }}_mtk_wifi.config
+  DIY_P1_SH: scripts/${{ env.SYSTEM }}/diy-part1.sh
+  DIY_P2_SH: scripts/${{ env.SYSTEM }}/diy-part2.sh
+  CLASH_KERNEL: arm64
+  CACHE_TOOLCHAIN: true
+  UPLOAD_BIN_DIR: false
+  FIRMWARE_RELEASE: true
+  FIRMWARE_TAG: ${{ env.SYSTEM }}-${{ env.BOARD }}
+  TZ: Asia/Shanghai
+  GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+
+jobs:
+  Build:
+    runs-on: ubuntu-22.04
+
+    outputs:
+      COMMIT_AUTHOR: ${{ steps.clone.outputs.COMMIT_AUTHOR }}
+      COMMIT_DATE: ${{ steps.clone.outputs.COMMIT_DATE }}
+      COMMIT_MESSAGE: ${{ steps.clone.outputs.COMMIT_MESSAGE }}
+      COMMIT_HASH: ${{ steps.clone.outputs.COMMIT_HASH }}
+      DEVICE_TARGET: ${{ steps.variable.outputs.DEVICE_TARGET }}
+      DEVICE_SUBTARGET: ${{ steps.variable.outputs.DEVICE_SUBTARGET }}
+
+    steps:
+    - name: 合并磁盘
+      uses: easimon/maximize-build-space@master
+      with:
+        swap-size-mb: 1024
+        temp-reserve-mb: 100
+        root-reserve-mb: 1024
+
+    - name: 准备完成
+      uses: actions/checkout@main
+
+    - name: 创建工作目录
+      run: |
+        mkdir -p ${GITHUB_WORKSPACE}/workdir
+        chmod 755 ${GITHUB_WORKSPACE}/workdir
+        sudo chown $USER:$GROUPS ${GITHUB_WORKSPACE}/workdir
+        echo "WORKDIR=$PWD" >> $GITHUB_ENV
+
+    - name: 检查服务器性能
+      run: |
+        echo "警告⚠"
+        echo "分配的服务器性能有限，若选择的插件过多，务必注意CPU性能！"
+        echo -e "已知CPU型号(降序): 7763，8370C，8272CL，8171M，E5-2673\n"
+        echo "--------------------------CPU信息--------------------------"
+        echo "CPU物理数量: $(cat /proc/cpuinfo | grep "physical id" | sort | uniq | wc -l)"
+        echo "CPU核心数量: $(nproc)"
+        echo -e "CPU型号信息:$(cat /proc/cpuinfo | grep -m1 name | awk -F: '{print $2}')\n"
+        echo "--------------------------内存信息--------------------------"
+        echo "已安装内存详细信息:"
+        echo -e "$(sudo lshw -short -C memory | grep GiB)\n"
+        echo "--------------------------硬盘信息--------------------------"
+        echo "硬盘数量: $(ls /dev/sd* | grep -v [1-9] | wc -l)" && df -hT
+
+    - name: 判断要使用的  版本
+      id: version_selector
+      run: |
+        USER_CHOICE="${{ env.BRANCH }}"
+        REPO_BRANCH=""
+
+        # 判断用户选择的是否是动态版本 (以 .y 结尾)
+        if [[ "$USER_CHOICE" == *.y ]]; then
+          # 移除 .y 后缀，得到版本前缀, e.g., "v24.10"
+          VERSION_PREFIX=$(echo "$USER_CHOICE" | sed 's/\.y$//')
+          echo "用户选择了动态版本，开始查找前缀为 ${VERSION_PREFIX} 的最新 tag..."
+
+        # 从远程仓库获取所有 tags，并按版本号逆序排序
+          ALL_TAGS=$(git ls-remote --tags --sort='-v:refname' $REPO_URL)
+
+          # 查找最新的稳定版 tag
+          # 使用 sed 's/.*\///;s/\^{}$//' 来移除前缀和可能存在的 ^{} 后缀
+          LATEST_STABLE_TAG=$(echo "${ALL_TAGS}" | grep "refs/tags/${VERSION_PREFIX}" | grep -v "trunk" | head -n 1 | sed 's/.*\///;s/\^{}$//')
+          
+        if [[ -n "$LATEST_STABLE_TAG" ]]; then
+          REPO_BRANCH="$LATEST_STABLE_TAG"
+          echo "找到最新的稳定版 tag: ${REPO_BRANCH}"
+        else
+          # 如果找不到任何稳定版 tag，则直接报错并退出
+          echo "::error:: 无法为前缀 ${VERSION_PREFIX} 找到任何匹配的稳定版 tag！"
+          exit 1
+        fi
+        else
+          # 如果用户选择的是一个固定版本 (如 24.10.1 或 main)，直接使用
+          REPO_BRANCH="$USER_CHOICE"
+          echo "用户选择了固定版本: ${REPO_BRANCH}"
+        fi
+
+        # 将最终确定的版本号输出到 GITHUB_ENV，供后续步骤使用
+        echo "最终选择的版本是: ${REPO_BRANCH}"
+        echo "REPO_BRANCH=${REPO_BRANCH}" >> $GITHUB_ENV
+
+    - name: 初始化环境
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        df -hT
+        echo "------------------------------- 更新并安装依赖 -------------------------------"
+        sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc $AGENT_TOOLSDIRECTORY
+        sudo -E apt-get -qq update
+        sudo -E apt-get -qq install $(curl -fsSL is.gd/depends_ubuntu_2204)
+        wget https://bootstrap.pypa.io/pip/3.6/get-pip.py
+        sudo python3 get-pip.py
+        sudo rm -rf get-pip.py
+        sudo pip install pyelftools
+        sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+        echo "------------------------------- 清理Docker镜像和软件 -------------------------------"
+        docker rmi `docker images -q`
+        docker image prune -a -f
+        sudo -E systemctl daemon-reload
+        sudo -E apt-get -y purge azure-cli ghc* zulu* hhvm llvm* firefox google* dotnet* powershell openjdk* adoptopenjdk* php* mongodb* dotnet* moby* snapd* android* || true
+        sudo -E apt-get -qq autoremove --purge
+        sudo -E apt-get -qq clean
+        echo "------------------------------- 设置工作目录及时区 -------------------------------"
+        sudo timedatectl set-timezone "$TZ"
+
+    - name: 克隆源代码-${{ env.SYSTEM }}-${{ env.REPO_BRANCH }}
+      working-directory: ${{ env.WORKDIR }}/workdir
+      id: clone
+      run: |
+        df -hT $GITHUB_WORKSPACE
+        git clone -q --single-branch --depth=1 --branch=${{ env.REPO_BRANCH }} $REPO_URL openwrt
+        # git clone $REPO_URL -b $REPO_BRANCH openwrt
+        cd openwrt
+        echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
+
+    - name: 设置源代码变量
+      # working-directory: ${{ env.WORKDIR }}/workdir
+      id: setenv
+      run: |
+        cd $OPENWRT_PATH
+        COMMIT_AUTHOR=$(git show -s --date=short --format="作者: %an")
+        echo "COMMIT_AUTHOR=$COMMIT_AUTHOR" >> $GITHUB_ENV
+        echo "COMMIT_AUTHOR=$COMMIT_AUTHOR" >> $GITHUB_OUTPUT
+        COMMIT_DATE=$(git show -s --date=short --format="时间: %ci")
+        echo "COMMIT_DATE=$COMMIT_DATE" >> $GITHUB_ENV
+        echo "COMMIT_DATE=$COMMIT_DATE" >> $GITHUB_OUTPUT
+        COMMIT_MESSAGE=$(git show -s --date=short --format="内容: %s")
+        echo "COMMIT_MESSAGE=$COMMIT_MESSAGE" >> $GITHUB_ENV
+        echo "COMMIT_MESSAGE=$COMMIT_MESSAGE" >> $GITHUB_OUTPUT
+        COMMIT_HASH=$(git show -s --date=short --format="hash: %H")
+        echo "COMMIT_HASH=$COMMIT_HASH" >> $GITHUB_ENV
+        echo "COMMIT_HASH=$COMMIT_HASH" >> $GITHUB_OUTPUT
+
+    - name: 生成变量
+      id: variable
+      run: |
+        # df -hT
+        # 复制 .config 文件到源码根目录
+        # cp $CONFIG_FILE $OPENWRT_PATH/.config
+        # [ -e $CONFIG_FILE ] && mv $CONFIG_FILE $OPENWRT_PATH/.config
+        cd $OPENWRT_PATH
+        # make defconfig > /dev/null 2>&1
+        
+        # 源码链接
+        SOURCE_REPO="$(echo $REPO_URL | awk -F '/' '{print $(NF)}')"
+        echo "SOURCE_REPO=$SOURCE_REPO" >> $GITHUB_ENV
+        
+        # 读取 CPU 信息
+        DEVICE_TARGET=$(cat $CONFIG_FILE | grep CONFIG_TARGET_BOARD | awk -F '"' '{print $2}')
+        echo "DEVICE_TARGET=$DEVICE_TARGET" >> $GITHUB_ENV
+        echo "DEVICE_TARGET=$DEVICE_TARGET" >> $GITHUB_OUTPUT
+        
+        # 读取 CPU 架构
+        DEVICE_SUBTARGET=$(cat $CONFIG_FILE | grep CONFIG_TARGET_SUBTARGET | awk -F '"' '{print $2}')
+        echo "DEVICE_SUBTARGET=$DEVICE_SUBTARGET" >> $GITHUB_ENV
+        echo "DEVICE_SUBTARGET=$DEVICE_SUBTARGET" >> $GITHUB_OUTPUT
+
+    - name: 显示变量
+      run: env
+
+    - name: 缓存工具链
+      if: env.CACHE_TOOLCHAIN == 'true'
+      uses: HiGarfield/cachewrtbuild@main
+      with:
+        # 检查是否缓存 ccache
+        ccache: false
+        mixkey: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.DEVICE_TARGET }}-${{ env.DEVICE_SUBTARGET }}
+        prefix: ${{ env.OPENWRT_PATH }}
+
+    - name: 加载自定义 feeds
+      run: |
+        chmod +x $DIY_P1_SH
+        cd $OPENWRT_PATH
+        $GITHUB_WORKSPACE/$DIY_P1_SH
+
+    - name: 更新 feeds
+      run: cd $OPENWRT_PATH && ./scripts/feeds update -a
+
+    - name: 安装 feeds
+      run: cd $OPENWRT_PATH && ./scripts/feeds install -a
+
+    - name: 加载自定义配置
+      run: |
+        df -hT
+        # 确保当前目录可写
+        sudo chmod -R +w ./
+        # 复制自定义机型配置文件到源码根目录
+        rsync -av --progress $GITHUB_WORKSPACE/userpatches/${{ env.SYSTEM }}/ $OPENWRT_PATH/
+        # cp --preserve=all -r $GITHUB_WORKSPACE/userpatches/${{ env.SYSTEM }}/* $OPENWRT_PATH/
+        
+        # 复制
+        # [ -e files ] && mv files $OPENWRT_PATH/files
+        
+        # 加载自定义配置
+        chmod +x $DIY_P2_SH
+        cd $OPENWRT_PATH
+        $GITHUB_WORKSPACE/$DIY_P2_SH
+        
+        # 加载通用自定义脚本
+        chmod +x $GITHUB_WORKSPACE/scripts/*.sh
+        # 下载 clash core
+        # $GITHUB_WORKSPACE/scripts/preset-clash-core.sh $CLASH_KERNEL
+        # 下载 adguard core
+        # $GITHUB_WORKSPACE/scripts/preset-adguard-core.sh $CLASH_KERNEL
+
+    - name: 加载配置文件
+      id: load-config
+      run: |
+        # cd $OPENWRT_PATH
+        
+        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE $OPENWRT_PATH/.config
+
+    - name: 进行编译配置
+      id: make-compile-config
+      run: |
+        cd $OPENWRT_PATH
+        make defconfig
+
+    - name: 下载软件包
+      id: package
+      run: |
+        cd $OPENWRT_PATH
+        make defconfig
+        make download -j8
+        find dl -size -1024c -exec ls -l {} \;
+        find dl -size -1024c -exec rm -f {} \;
+
+    - name: 编译固件
+      id: compile
+      run: |
+        cd $OPENWRT_PATH
+        mkdir -p files/etc/uci-defaults
+        cp $GITHUB_WORKSPACE/scripts/init-settings.sh files/etc/uci-defaults/99-init-settings
+        echo -e "$(nproc) thread compile"
+        make -j$(nproc) V=sc || make -j1 V=sc || make -j1 V=sc
+        echo "status=success" >> $GITHUB_OUTPUT
+        echo "DATE=$(date +"%Y-%m-%d %H:%M:%S")" >> $GITHUB_ENV
+        echo "TAG_DATE=$(date +"%Y.%m.%d-%H.%M")" >> $GITHUB_ENV
+        echo "FILE_DATE=$(date +"%Y.%m.%d")" >> $GITHUB_ENV
+
+    - name: 检查空间使用情况
+      if: (!cancelled())
+      run: df -hT
+
+    - name: 上传固件
+      uses: actions/upload-artifact@main
+      if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
+      with:
+        name: ${{ env.SOURCE_REPO }}-bin-${{ env.DEVICE_TARGET }}-${{ env.DEVICE_SUBTARGET }}-${{ env.FILE_DATE }}
+        path: ${{ env.OPENWRT_PATH }}/bin
+
+    - name: 整理文件
+      if: steps.compile.outputs.status == 'success'
+      run: |
+        cd $OPENWRT_PATH/bin/targets/*/*
+        cat sha256sums
+        cp $OPENWRT_PATH/.config build.config
+        mv -f $OPENWRT_PATH/bin/packages/*/*/*.ipk packages
+        tar -zcf Packages.tar.gz packages
+        rm -rf packages feeds.buildinfo version.buildinfo
+        echo "KERNEL=$(cat *.manifest | grep ^kernel | cut -d- -f2 | tr -d ' ')" >> $GITHUB_ENV
+        echo "FIRMWARE_PATH=$PWD" >> $GITHUB_ENV
+
+    - name: 将固件上传到 Artifact
+      if: steps.compile.outputs.status == 'success' && env.FIRMWARE_RELEASE != 'true'
+      uses: actions/upload-artifact@main
+      with:
+        name: ${{ env.SOURCE_REPO }}-firmware-${{ env.DEVICE_TARGET }}-${{ env.DEVICE_SUBTARGET }}-${{ env.FILE_DATE }}
+        path: ${{ env.FIRMWARE_PATH }}
+
+    - name: 上传发布固件
+      if: steps.compile.outputs.status == 'success' && env.FIRMWARE_RELEASE == 'true'
+      uses: ncipollo/release-action@v1
+      with:
+        name: R${{ env.DATE }} for ${{ env.FIRMWARE_TAG }}
+        allowUpdates: true
+        tag: ${{ env.TAG_DATE }}-${{ env.FIRMWARE_TAG }}
+        token: ${{ env.GITHUB_TOKEN }}
+        artifacts: ${{ env.FIRMWARE_PATH }}/*
+        body: |
+          **This is OpenWrt Firmware for ${{ env.FIRMWARE_TAG }}**
+          ### 📒 固件信息
+          - 💻 平台架构: ${{ env.DEVICE_TARGET }}-${{ env.DEVICE_SUBTARGET }} (rk33xx, rk35xx)
+          - ⚽ 固件源码: ${{ env.REPO_URL }}
+          - 💝 源码分支: ${{ env.REPO_BRANCH }}
+          - 🚀 内核版本: ${{ env.KERNEL }}
+          - 🌐 默认地址: 10.0.0.1
+          - 🔑 默认密码: 
+          ### 🧊 固件版本
+          - 固件编译前最后一次➦[主源码](${{ env.REPO_URL }})更新记录
+          - ${{ env.COMMIT_AUTHOR }}
+          - ${{ env.COMMIT_DATE }}
+          - ${{ env.COMMIT_MESSAGE }}
+          - ${{ env.COMMIT_HASH }}
