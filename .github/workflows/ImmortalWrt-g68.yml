@@ -208,7 +208,7 @@ jobs:
         # 加载通用自定义脚本
         chmod +x $GITHUB_WORKSPACE/scripts/*.sh
         # 下载 clash core
-        $GITHUB_WORKSPACE/scripts/preset-clash-core.sh $CLASH_KERNEL
+        # $GITHUB_WORKSPACE/scripts/preset-clash-core.sh $CLASH_KERNEL
         # 下载 adguard core
         # $GITHUB_WORKSPACE/scripts/preset-adguard-core.sh $CLASH_KERNEL
 
