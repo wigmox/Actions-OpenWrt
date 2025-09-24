@@ -39,6 +39,8 @@ on:
           - openwrt-24.10
           - v24.10.1
           - v24.10.2
+          - v24.10.3
+          - v24.10.4
           - v24.10.y
           
 env:
@@ -108,7 +110,7 @@ jobs:
 
         # 判断用户选择的是否是动态版本 (以 .y 结尾)
         if [[ "$USER_CHOICE" == *.y ]]; then
-          # 移除 .y 后缀，得到版本前缀, e.g., "v25.8"
+          # 移除 .y 后缀，得到版本前缀, e.g., "v24.10"
           VERSION_PREFIX=$(echo "$USER_CHOICE" | sed 's/\.y$//')
           echo "用户选择了动态版本，开始查找前缀为 ${VERSION_PREFIX} 的最新 tag..."
 
@@ -116,13 +118,13 @@ jobs:
           # 使用 `git ls-remote` 可以在不克隆整个仓库的情况下获取 tags，速度非常快
           ALL_TAGS=$(git ls-remote --tags --sort='-v:refname' $REPO_URL)
 
-          # 1. 优先查找稳定版 (不含 "trunk")
-          # 格式类似: 24.10.1
-          LATEST_STABLE_TAG=$(echo "${ALL_TAGS}" | grep "refs/tags/${VERSION_PREFIX}" | grep -v "trunk" | head -n 1 | sed 's/.*\///')
+          # 格式类似: v24.10.1
+          LATEST_STABLE_TAG=$(echo "${ALL_TAGS}" | grep "refs/tags/${VERSION_PREFIX}" |head -n 1 | sed 's/.*\///')
           
           if [[ -n "$LATEST_STABLE_TAG" ]]; then
             REPO_BRANCH="$LATEST_STABLE_TAG"
             echo "找到最新的稳定版 tag: ${REPO_BRANCH}"
+          else
               echo "::error:: 无法为前缀 ${VERSION_PREFIX} 找到任何匹配的 tag！"
               exit 1
             fi
