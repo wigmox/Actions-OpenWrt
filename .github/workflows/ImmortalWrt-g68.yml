@@ -114,30 +114,21 @@ jobs:
           VERSION_PREFIX=$(echo "$USER_CHOICE" | sed 's/\.y$//')
           echo "用户选择了动态版本，开始查找前缀为 ${VERSION_PREFIX} 的最新 tag..."
 
-          # 从  远程仓库获取所有 tags，并按版本号逆序排序 (最新版本在最前面)
-          # 使用 `git ls-remote` 可以在不克隆整个仓库的情况下获取 tags，速度非常快
+        # 从远程仓库获取所有 tags，并按版本号逆序排序
           ALL_TAGS=$(git ls-remote --tags --sort='-v:refname' $REPO_URL)
 
-          # 格式类似: v24.10.1
-          LATEST_STABLE_TAG=$(echo "${ALL_TAGS}" | grep "refs/tags/${VERSION_PREFIX}" | grep -v "trunk" | head -n 1 | sed 's/.*\///')
+          # 查找最新的稳定版 tag
+          # 使用 sed 's/.*\///;s/\^{}$//' 来移除前缀和可能存在的 ^{} 后缀
+          LATEST_STABLE_TAG=$(echo "${ALL_TAGS}" | grep "refs/tags/${VERSION_PREFIX}" | grep -v "trunk" | head -n 1 | sed 's/.*\///;s/\^{}$//')
           
-          if [[ -n "$LATEST_STABLE_TAG" ]]; then
-            REPO_BRANCH="$LATEST_STABLE_TAG"
-            echo "找到最新的稳定版 tag: ${REPO_BRANCH}"
-          else
-            # 2. 如果没有稳定版，则查找最新的 trunk 版
-            # 格式类似: v25.8.0-trunk.1, v25.8.0-trunk.2
-            echo "未找到 ${VERSION_PREFIX} 系列的稳定版，开始查找最新的 trunk 版..."
-            LATEST_TRUNK_TAG=$(echo "${ALL_TAGS}" | grep "refs/tags/${VERSION_PREFIX}" | grep "trunk" | head -n 1 | sed 's/.*\///')
-
-            if [[ -n "$LATEST_TRUNK_TAG" ]]; then
-              ARMBIAN_VERSION="$LATEST_TRUNK_TAG"
-              echo "找到最新的 trunk 版 tag: ${ARMBIAN_VERSION}"
-            else
-              echo "::error:: 无法为前缀 ${VERSION_PREFIX} 找到任何匹配的 tag！"
-              exit 1
-            fi
-          fi
+        if [[ -n "$LATEST_STABLE_TAG" ]]; then
+          REPO_BRANCH="$LATEST_STABLE_TAG"
+          echo "找到最新的稳定版 tag: ${REPO_BRANCH}"
+        else
+          # 如果找不到任何稳定版 tag，则直接报错并退出
+          echo "::error:: 无法为前缀 ${VERSION_PREFIX} 找到任何匹配的稳定版 tag！"
+          exit 1
+        fi
         else
           # 如果用户选择的是一个固定版本 (如 24.10.1 或 main)，直接使用
           REPO_BRANCH="$USER_CHOICE"
@@ -145,6 +136,7 @@ jobs:
         fi
 
         # 将最终确定的版本号输出到 GITHUB_ENV，供后续步骤使用
+        echo "最终选择的版本是: ${REPO_BRANCH}"
         echo "REPO_BRANCH=${REPO_BRANCH}" >> $GITHUB_ENV
 
     - name: 初始化环境
@@ -171,7 +163,7 @@ jobs:
         echo "------------------------------- 设置工作目录及时区 -------------------------------"
         sudo timedatectl set-timezone "$TZ"
 
-    - name: 克隆源代码-${{ inputs.SYSTEM }}-${{ inputs.BRANCH }}
+    - name: 克隆源代码-${{ inputs.SYSTEM }}-${{ env.REPO_BRANCH }}
       working-directory: ${{ env.WORKDIR }}/workdir
       id: clone
       run: |
