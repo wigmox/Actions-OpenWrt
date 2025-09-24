@@ -1,5 +1,5 @@
 diff --git a/package/base-files/files/lib/upgrade/do_stage2 b/package/base-files/files/lib/upgrade/do_stage2
-index 0e32445..bfc3ca2 100755
+
 --- a/package/base-files/files/lib/upgrade/do_stage2
 +++ b/package/base-files/files/lib/upgrade/do_stage2
 @@ -16,6 +16,12 @@ if [ -n "$UPGRADE_BACKUP" ] && type 'platform_copy_config' >/dev/null 2>/dev/nul

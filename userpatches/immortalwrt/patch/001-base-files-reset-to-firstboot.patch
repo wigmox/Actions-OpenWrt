@@ -1,5 +1,5 @@
 diff --git a/package/base-files/files/etc/rc.button/reset b/package/base-files/files/etc/rc.button/reset
-index 2403122..ca7dcf3 100755
+
 --- a/package/base-files/files/etc/rc.button/reset
 +++ b/package/base-files/files/etc/rc.button/reset
 @@ -23,7 +23,7 @@ released)

@@ -1,7 +1,5 @@
 diff --git a/package/base-files/files/lib/upgrade/common.sh b/package/base-files/files/lib/upgrade/common.sh
-old mode 100644
-new mode 100755
-index af1182c..abe4eb7
+
 --- a/package/base-files/files/lib/upgrade/common.sh
 +++ b/package/base-files/files/lib/upgrade/common.sh
 @@ -67,6 +67,7 @@ _v() {

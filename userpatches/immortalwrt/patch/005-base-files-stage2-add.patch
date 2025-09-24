@@ -1,5 +1,5 @@
 diff --git a/package/base-files/files/lib/upgrade/stage2 b/package/base-files/files/lib/upgrade/stage2
-index 5ce0b35..16e4df3 100755
+
 --- a/package/base-files/files/lib/upgrade/stage2
 +++ b/package/base-files/files/lib/upgrade/stage2
 @@ -18,17 +18,21 @@ include /lib/upgrade
