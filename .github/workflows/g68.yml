@@ -1,4 +1,4 @@
-name: ImmortalWrt-g68
+name: ImmortalWrt-g68-test
 
 on:
   schedule:
@@ -107,7 +107,7 @@ jobs:
     - name: 判断要使用的  版本
       id: version_selector
       run: |
-        USER_CHOICE="${{ env.BRANCH }}"
+        USER_CHOICE="$REPO_BRANCH"
         REPO_BRANCH=""
 
         # 判断用户选择的是否是动态版本 (以 .y 结尾)
