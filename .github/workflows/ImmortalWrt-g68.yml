@@ -59,42 +59,6 @@ jobs:
   Build:
     runs-on: ubuntu-22.04
 
-      - name: 判断要使用的  版本
-        id: version_selector
-        run: |
-          USER_CHOICE="${{ inputs.BRANCH }}"
-          REPO_BRANCH=""
-
-          # 判断用户选择的是否是动态版本 (以 .y 结尾)
-          if [[ "$USER_CHOICE" == *.y ]]; then
-            # 移除 .y 后缀，得到版本前缀, e.g., "v25.8"
-            VERSION_PREFIX=$(echo "$USER_CHOICE" | sed 's/\.y$//')
-            echo "用户选择了动态版本，开始查找前缀为 ${VERSION_PREFIX} 的最新 tag..."
-
-            # 从  远程仓库获取所有 tags，并按版本号逆序排序 (最新版本在最前面)
-            # 使用 `git ls-remote` 可以在不克隆整个仓库的情况下获取 tags，速度非常快
-            ALL_TAGS=$(git ls-remote --tags --sort='-v:refname' $REPO_URL)
-
-            # 1. 优先查找稳定版 (不含 "trunk")
-            # 格式类似: 24.10.1
-            LATEST_STABLE_TAG=$(echo "${ALL_TAGS}" | grep "refs/tags/${VERSION_PREFIX}" | grep -v "trunk" | head -n 1 | sed 's/.*\///')
-            
-            if [[ -n "$LATEST_STABLE_TAG" ]]; then
-              REPO_BRANCH="$LATEST_STABLE_TAG"
-              echo "找到最新的稳定版 tag: ${REPO_BRANCH}"
-                echo "::error:: 无法为前缀 ${VERSION_PREFIX} 找到任何匹配的 tag！"
-                exit 1
-              fi
-            fi
-          else
-            # 如果用户选择的是一个固定版本 (如 24.10.1 或 main)，直接使用
-            REPO_BRANCH="$USER_CHOICE"
-            echo "用户选择了固定版本: ${REPO_BRANCH}"
-          fi
-
-          # 将最终确定的版本号输出到 GITHUB_ENV，供后续步骤使用
-          echo "REPO_BRANCH=${REPO_BRANCH}" >> $GITHUB_ENV
-
     outputs:
       COMMIT_AUTHOR: ${{ steps.clone.outputs.COMMIT_AUTHOR }}
       COMMIT_DATE: ${{ steps.clone.outputs.COMMIT_DATE }}
@@ -135,6 +99,42 @@ jobs:
         echo -e "$(sudo lshw -short -C memory | grep GiB)\n"
         echo "--------------------------硬盘信息--------------------------"
         echo "硬盘数量: $(ls /dev/sd* | grep -v [1-9] | wc -l)" && df -hT
+
+    - name: 判断要使用的  版本
+      id: version_selector
+      run: |
+        USER_CHOICE="${{ inputs.BRANCH }}"
+        REPO_BRANCH=""
+
+        # 判断用户选择的是否是动态版本 (以 .y 结尾)
+        if [[ "$USER_CHOICE" == *.y ]]; then
+          # 移除 .y 后缀，得到版本前缀, e.g., "v25.8"
+          VERSION_PREFIX=$(echo "$USER_CHOICE" | sed 's/\.y$//')
+          echo "用户选择了动态版本，开始查找前缀为 ${VERSION_PREFIX} 的最新 tag..."
+
+          # 从  远程仓库获取所有 tags，并按版本号逆序排序 (最新版本在最前面)
+          # 使用 `git ls-remote` 可以在不克隆整个仓库的情况下获取 tags，速度非常快
+          ALL_TAGS=$(git ls-remote --tags --sort='-v:refname' $REPO_URL)
+
+          # 1. 优先查找稳定版 (不含 "trunk")
+          # 格式类似: 24.10.1
+          LATEST_STABLE_TAG=$(echo "${ALL_TAGS}" | grep "refs/tags/${VERSION_PREFIX}" | grep -v "trunk" | head -n 1 | sed 's/.*\///')
+          
+          if [[ -n "$LATEST_STABLE_TAG" ]]; then
+            REPO_BRANCH="$LATEST_STABLE_TAG"
+            echo "找到最新的稳定版 tag: ${REPO_BRANCH}"
+              echo "::error:: 无法为前缀 ${VERSION_PREFIX} 找到任何匹配的 tag！"
+              exit 1
+            fi
+          fi
+        else
+          # 如果用户选择的是一个固定版本 (如 24.10.1 或 main)，直接使用
+          REPO_BRANCH="$USER_CHOICE"
+          echo "用户选择了固定版本: ${REPO_BRANCH}"
+        fi
+
+        # 将最终确定的版本号输出到 GITHUB_ENV，供后续步骤使用
+        echo "REPO_BRANCH=${REPO_BRANCH}" >> $GITHUB_ENV
 
     - name: 初始化环境
       env:
