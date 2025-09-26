@@ -1,4 +1,4 @@
-name: openwrt-g68-test
+name: openwrt-g68
 
 on:
   schedule:
@@ -48,7 +48,7 @@ env:
   SYSTEM: ${{ inputs.SYSTEM || 'openwrt'}}
   REPO_BRANCH: ${{ inputs.BRANCH || 'openwrt-24.10'}}
   REPO_URL: https://github.com/openwrt/openwrt
-  CONFIG_FILE: userpatches/immortalwrt/defconfig/${{ inputs.BOARD || 'g68-plus'}}_mtk_wifi.config
+  CONFIG_FILE: userpatches/${{ inputs.SYSTEM || 'openwrt'}}/defconfig/${{ inputs.BOARD || 'g68-plus'}}_mtk_wifi.config
   DIY_P1_SH: scripts/openwrt/diy-part1.sh
   DIY_P2_SH: scripts/openwrt/diy-part2.sh
   CLASH_KERNEL: arm64
@@ -247,8 +247,8 @@ jobs:
         # 确保当前目录可写
         sudo chmod -R +w ./
         # 复制自定义机型配置文件到源码根目录
-        rsync -av --progress $GITHUB_WORKSPACE/userpatches/immortalwrt/ $OPENWRT_PATH/
-        # cp --preserve=all -r $GITHUB_WORKSPACE/userpatches/immortalwrt/* $OPENWRT_PATH/
+        rsync -av --progress $GITHUB_WORKSPACE/userpatches/${{ env.SYSTEM }}/ $OPENWRT_PATH/
+        # cp --preserve=all -r $GITHUB_WORKSPACE/userpatches/${{ env.SYSTEM }}/* $OPENWRT_PATH/
         
         # 复制
         # [ -e files ] && mv files $OPENWRT_PATH/files
