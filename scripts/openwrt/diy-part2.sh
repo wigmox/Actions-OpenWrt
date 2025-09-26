@@ -19,7 +19,8 @@ sed -i 's/192.168.1.1/10.0.0.1/g' package/base-files/files/bin/config_generate
 sed -i 's|/bin/login|/bin/login -f root|g' feeds/packages/utils/ttyd/files/ttyd.config
 
 # 修改软件源
-# sed -i 's|https://mirrors.vsean.net/openwrt|https://mirrors.pku.edu.cn/immortalwrt|g' package/emortal/default-settings/files/99-default-settings-chinese
+# 已通过 config 修改软件源，
+# sed -i 's|https://downloads.openwrt.org|https://mirrors.pku.edu.cn/openwrt|g' package/emortal/default-settings/files/99-default-settings-chinese
 
 # 80_mount_root 添加挂载目录
 # 这个脚本用于在package/base-files/files/lib/preinit/80_mount_root文件中的do_mount_root函数内添加resize2fs命令
