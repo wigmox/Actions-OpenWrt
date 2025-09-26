@@ -1,0 +1,21 @@
+config global
+	option anon_swap '0'
+	option anon_mount '0'
+	option auto_swap '1'
+	option auto_mount '1'
+	option delay_root '5'
+	option check_fs '0'
+
+config mount boot
+	option target '/boot'
+	option label 'kernel'
+	option options 'rw,noatime'
+	option enabled '1'
+	option enabled_fsck '1'
+
+config mount overlay
+	option target '/overlay'
+	option label 'rootfs_data'
+	option options 'rw,noatime'
+	option enabled '1'
+	option enabled_fsck '1'

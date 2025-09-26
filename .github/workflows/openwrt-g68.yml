@@ -49,8 +49,8 @@ env:
   REPO_BRANCH: ${{ inputs.BRANCH || 'openwrt-24.10'}}
   REPO_URL: https://github.com/openwrt/openwrt
   CONFIG_FILE: userpatches/immortalwrt/defconfig/${{ inputs.BOARD || 'g68-plus'}}_mtk_wifi.config
-  DIY_P1_SH: scripts/immortalwrt/diy-part1.sh
-  DIY_P2_SH: scripts/immortalwrt/diy-part2.sh
+  DIY_P1_SH: scripts/openwrt/diy-part1.sh
+  DIY_P2_SH: scripts/openwrt/diy-part2.sh
   CLASH_KERNEL: arm64
   CACHE_TOOLCHAIN: true
   UPLOAD_BIN_DIR: false
@@ -165,13 +165,13 @@ jobs:
         echo "------------------------------- 设置工作目录及时区 -------------------------------"
         sudo timedatectl set-timezone "$TZ"
 
-    - name: 克隆源代码-$SYSTEM-$BRANCH
+    - name: 克隆源代码-${{ env.SYSTEM }}-${{ env.REPO_BRANCH }}
       working-directory: ${{ env.WORKDIR }}/workdir
       id: clone
       run: |
         df -hT $GITHUB_WORKSPACE
-        git clone -q --single-branch --depth=1 --branch=$REPO_BRANCH $REPO_URL openwrt
-        # git clone $REPO_URL -b $REPO_BRANCH openwrt
+        git clone -q --single-branch --depth=1 --branch=${{ env.REPO_BRANCH }} $REPO_URL openwrt
+        # git clone $REPO_URL -b ${{ env.REPO_BRANCH }} openwrt
         cd openwrt
         echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
 
@@ -226,7 +226,7 @@ jobs:
       with:
         # 检查是否缓存 ccache
         ccache: false
-        mixkey: ${{ env.SOURCE_REPO }}-$REPO_BRANCH-${{ env.DEVICE_TARGET }}-${{ env.DEVICE_SUBTARGET }}
+        mixkey: ${{ env.SOURCE_REPO }}-${{ env.REPO_BRANCH }}-${{ env.DEVICE_TARGET }}-${{ env.DEVICE_SUBTARGET }}
         prefix: ${{ env.OPENWRT_PATH }}
 
     - name: 加载自定义 feeds
@@ -294,7 +294,7 @@ jobs:
         mkdir -p files/etc/uci-defaults
         cp $GITHUB_WORKSPACE/scripts/init-settings.sh files/etc/uci-defaults/99-init-settings
         echo -e "$(nproc) thread compile"
-        make -j$(nproc) V=sc || make -j1 V=sc || make -j1 V=sc
+        make -j$(nproc) V=s || make -j1 V=s || make -j1 V=s
         echo "status=success" >> $GITHUB_OUTPUT
         echo "DATE=$(date +"%Y-%m-%d %H:%M:%S")" >> $GITHUB_ENV
         echo "TAG_DATE=$(date +"%Y.%m.%d-%H.%M")" >> $GITHUB_ENV
@@ -344,7 +344,7 @@ jobs:
           ### 📒 固件信息
           - 💻 平台架构: ${{ env.DEVICE_TARGET }}-${{ env.DEVICE_SUBTARGET }} (rk33xx, rk35xx)
           - ⚽ 固件源码: ${{ env.REPO_URL }}
-          - 💝 源码分支: $REPO_BRANCH
+          - 💝 源码分支: ${{ env.REPO_BRANCH }}
           - 🚀 内核版本: ${{ env.KERNEL }}
           - 🌐 默认地址: 10.0.0.1
           - 🔑 默认密码: 
