@@ -22,6 +22,9 @@ sed -i 's|/bin/login|/bin/login -f root|g' feeds/packages/utils/ttyd/files/ttyd.
 # 已通过 config 修改软件源，
 # sed -i 's|https://downloads.openwrt.org|https://mirrors.pku.edu.cn/openwrt|g' package/emortal/default-settings/files/99-default-settings-chinese
 
+# 修正自动编译 openwet 时 rust 选项 导致错误
+grep -qF '--set=llvm.download-ci-llvm=true' feeds/packages/lang/rust/Makefile && sed -i 's/--set=llvm.download-ci-llvm=true/--set=llvm.download-ci-llvm="if-unchanged"/' feeds/packages/lang/rust/Makefile
+
 # 80_mount_root 添加挂载目录
 # 这个脚本用于在package/base-files/files/lib/preinit/80_mount_root文件中的do_mount_root函数内添加resize2fs命令
 # 使用sed命令在do_mount_root() {之后添加resize2fs命令
