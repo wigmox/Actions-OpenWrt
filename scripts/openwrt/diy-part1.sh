@@ -15,7 +15,7 @@ sed -i 's|https://git.openwrt.org/feed|https://github.com/openwrt|g' feeds.conf.
 # echo 'src-git xiaomeng9597 https://github.com/xiaomeng9597/openwrt-packages2.git;main' >> feeds.conf.default
 
 # kiddin9 源
-echo 'src-git kiddin9 https://github.com/kiddin9/kwrt-packages;main' >> feeds.conf.default
+# echo 'src-git kiddin9 https://github.com/kiddin9/kwrt-packages;main' >> feeds.conf.default
 
 
 
