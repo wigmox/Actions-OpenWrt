@@ -23,7 +23,12 @@ sed -i 's|/bin/login|/bin/login -f root|g' feeds/packages/utils/ttyd/files/ttyd.
 # sed -i 's|https://downloads.openwrt.org|https://mirrors.pku.edu.cn/openwrt|g' package/emortal/default-settings/files/99-default-settings-chinese
 
 # 修正自动编译 openwet 时 rust 选项 导致错误
-grep -qF '--set=llvm.download-ci-llvm=true' feeds/packages/lang/rust/Makefile && sed -i 's/--set=llvm.download-ci-llvm=true/--set=llvm.download-ci-llvm="if-unchanged"/' feeds/packages/lang/rust/Makefile
+# 使用更安全的转义版本
+grep -qF '--set=llvm.download-ci-llvm=true' feeds/packages/lang/rust/Makefile && \
+sed -i 's/--set=llvm\.download-ci-llvm=true/--set=llvm.download-ci-llvm="if-unchanged"/' feeds/packages/lang/rust/Makefile && \
+echo "替换完成！新内容：" && \
+grep 'download-ci-llvm' feeds/packages/lang/rust/Makefile
+
 # 另一个方法，添加	--ci false \ 参数欺骗系统不在 ci 环境，绕过验证
 # sed -i '/^\s*\$(\PYTHON) \$(\HOST_BUILD_DIR)\/x\.py \\/a\\t--ci false \\' feeds/packages/lang/rust/Makefile
 
