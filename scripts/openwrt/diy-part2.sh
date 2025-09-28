@@ -24,14 +24,14 @@ sed -i 's|/bin/login|/bin/login -f root|g' feeds/packages/utils/ttyd/files/ttyd.
 
 # 修正自动编译 openwet 时 rust 选项 导致错误
 echo 修正自动编译 openwet 时 rust 选项 导致错误
-if grep -q -- '--set=llvm.download-ci-llvm=true' feeds/packages/lang/rust/Makefile; then
-    sed -i 's/--set=llvm\.download-ci-llvm=true/--set=llvm.download-ci-llvm="if-unchanged"/' feeds/packages/lang/rust/Makefile
-fi
-echo "替换完成！新内容："
-grep 'download-ci-llvm' feeds/packages/lang/rust/Makefile
+# if grep -q -- '--set=llvm.download-ci-llvm=true' feeds/packages/lang/rust/Makefile; then
+#     sed -i 's/--set=llvm\.download-ci-llvm=true/--set=llvm.download-ci-llvm="if-unchanged"/' feeds/packages/lang/rust/Makefile
+# fi
+# echo "替换完成！新内容："
+# grep 'download-ci-llvm' feeds/packages/lang/rust/Makefile
 
 # 另一个方法，添加	--ci false \ 参数欺骗系统不在 ci 环境，绕过验证
-# sed -i '/^\s*\$(\PYTHON) \$(\HOST_BUILD_DIR)\/x\.py \\/a\\t\t--ci false \\' feeds/packages/lang/rust/Makefile
+sed -i '/^\s*\$(\PYTHON) \$(\HOST_BUILD_DIR)\/x\.py \\/a\\t\t--ci false \\' feeds/packages/lang/rust/Makefile
 echo 完成
 
 # 80_mount_root 添加挂载目录
