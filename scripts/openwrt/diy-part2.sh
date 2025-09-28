@@ -223,9 +223,55 @@ chmod +x scripts/gen_image_generic.sh
 # 打上 patch 目录下的补丁
 # 使用git apply 循环处理
 echo :打 patch 目录下的补丁
-for patch_file in patch/*.patch; do
-    echo "Applying $patch_file using plaintext:"
-    git apply --stat "$patch_file"
-    git apply --check "$patch_file" || { echo "Error checking $patch_file"; continue; }
-    git apply "$patch_file" && echo "Applied successfully" || echo "Application failed"
+# for patch_file in patch/*.patch; do
+#     echo "Applying $patch_file using plaintext:"
+#     git apply --stat "$patch_file"
+#     git apply --check "$patch_file" || { echo "Error checking $patch_file"; continue; }
+#     git apply "$patch_file" && echo "Applied successfully" || echo "Application failed"
+# done
+
+
+
+# Set directories from arguments, or use defaults.
+targetdir=${1-.}
+patchdir=${2-./patch}
+patchpattern=${3-*}
+
+if [ ! -d "${targetdir}" ] ; then
+    echo "Aborting.  '${targetdir}' is not a directory."
+    exit 1
+fi
+if [ ! -d "${patchdir}" ] ; then
+    echo "Aborting.  '${patchdir}' is not a directory."
+    exit 1
+fi
+    
+for i in ${patchdir}/${patchpattern} ; do 
+    case "$i" in
+	*.gz)
+	type="gzip"; uncomp="gunzip -dc"; ;; 
+	*.bz)
+	type="bzip"; uncomp="bunzip -dc"; ;; 
+	*.bz2)
+	type="bzip2"; uncomp="bunzip2 -dc"; ;; 
+	*.zip)
+	type="zip"; uncomp="unzip -d"; ;; 
+	*.Z)
+	type="compress"; uncomp="uncompress -c"; ;; 
+	*)
+	type="plaintext"; uncomp="cat"; ;; 
+    esac
+    [ -d "${i}" ] && echo "Ignoring subdirectory ${i}" && continue	
+    echo ""
+    echo "Applying ${i} using ${type}: " 
+    ${uncomp} ${i} | ${PATCH:-patch} -f -p1 -d ${targetdir}
+    if [ $? != 0 ] ; then
+        echo "Patch failed!  Please fix $i!"
+	exit 1
+    fi
 done
+
+echo ""
+echo "--------------------------------------------------"
+echo "所有补丁已成功应用。"
+exit 0
