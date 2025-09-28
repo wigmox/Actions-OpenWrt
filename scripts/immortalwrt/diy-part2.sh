@@ -209,10 +209,69 @@ chmod +x scripts/gen_image_generic.sh
 
 # 打上 patch 目录下的补丁
 # 使用git apply 循环处理
-echo :打 patch 目录下的补丁
-for patch_file in patch/*.patch; do
-    echo "Applying $patch_file using plaintext:"
-    git apply --stat "$patch_file"
-    git apply --check "$patch_file" || { echo "Error checking $patch_file"; continue; }
-    git apply "$patch_file" && echo "Applied successfully" || echo "Application failed"
+# echo :打 patch 目录下的补丁
+# for patch_file in patch/*.patch; do
+#     echo "Applying $patch_file using plaintext:"
+#     git apply --stat "$patch_file"
+#     git apply --check "$patch_file" || { echo "Error checking $patch_file"; continue; }
+#     git apply "$patch_file" && echo "Applied successfully" || echo "Application failed"
+# done
+
+
+
+
+# --- 配置 ---
+# 补丁文件所在的目录
+PATCH_DIR="patch"
+
+# 需要被打补丁的源码根目录
+# 设置为 "." 表示当前目录
+SOURCE_DIR="."
+
+# --- 脚本主逻辑 ---
+
+# 检查补丁目录是否存在
+if [ ! -d "$PATCH_DIR" ]; then
+    echo "补丁目录 '$PATCH_DIR' 不存在，无需操作。"
+    exit 0
+fi
+
+# 检查是否存在 .patch 文件
+# shopt -s nullglob 让通配符在没有匹配时返回空，而不是字符串本身
+shopt -s nullglob
+patches=("$PATCH_DIR"/*.patch)
+if [ ${#patches[@]} -eq 0 ]; then
+    echo "在 '$PATCH_DIR' 目录中没有找到 .patch 文件，无需操作。"
+    exit 0
+fi
+shopt -u nullglob # 恢复默认行为
+
+echo "==> 开始应用补丁..."
+
+# 遍历并应用所有补丁文件 (按字母顺序)
+# 使用 find 和 sort 来确保跨平台和处理特殊字符的兼容性
+find "$PATCH_DIR" -maxdepth 1 -type f -name "*.patch" | sort | while IFS= read -r patch_file; do
+    # 打印正在应用的补丁名
+    echo "Applying patch $(basename "$patch_file")"
+
+    # 使用 patch 命令应用补丁
+    # -f: 强制
+    # -p1: 剥离第一层目录
+    # -d: 指定源码目录
+    # < "$patch_file": 从补丁文件读取输入
+    patch -f -p1 -d "$SOURCE_DIR" < "$patch_file"
+
+    # 检查上一条命令的退出码 (返回值)
+    # $? 存储了上一条命令的退出码，0 代表成功，非 0 代表失败
+    if [ $? -ne 0 ]; then
+        echo "===================================================="
+        echo "错误: 补丁应用失败！请检查补丁文件或源码！"
+        echo "失败的补丁: $(basename "$patch_file")"
+        echo "===================================================="
+        # 退出脚本，并返回一个错误码
+        exit 1
+    fi
 done
+
+echo "==> 所有补丁已成功应用。"
+exit 0
