@@ -6,7 +6,19 @@ git clone --depth=1 https://github.com/sirpdboy/luci-app-eqosplus package/luci-a
 # 应用过滤(OAF)
 git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter
 
+# 修改 feed 软件源
+# sed -i 's|https://git.openwrt.org/feed|https://github.com/openwrt|g' feeds.conf.default
 
+# 追加 feed 软件源
+
+# xiaomeng9597 源
+# echo 'src-git xiaomeng9597 https://github.com/xiaomeng9597/openwrt-packages2.git;main' >> feeds.conf.default
+
+# kiddin9 源
+# echo 'src-git kiddin9 https://github.com/kiddin9/kwrt-packages;main' >> feeds.conf.default
+
+# kenzok8/small-package 源
+# sed -i '$a src-git smpackage https://github.com/kenzok8/small-package' feeds.conf.default
 
 
 
