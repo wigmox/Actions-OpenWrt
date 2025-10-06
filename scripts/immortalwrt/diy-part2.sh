@@ -21,14 +21,6 @@ sed -i 's|/bin/login|/bin/login -f root|g' feeds/packages/utils/ttyd/files/ttyd.
 # 修改软件源
 sed -i 's|https://mirrors.vsean.net/openwrt|https://mirrors.pku.edu.cn/immortalwrt|g' package/emortal/default-settings/files/99-default-settings-chinese
 
-# 80_mount_root 添加挂载目录
-# 这个脚本用于在package/base-files/files/lib/preinit/80_mount_root文件中的do_mount_root函数内添加resize2fs命令
-# 使用sed命令在do_mount_root() {之后添加resize2fs命令
-sed -i '/^do_mount_root() {/a\	resize2fs /dev/mmcblk0p1\
-	resize2fs /dev/mmcblk0p2\
-	resize2fs /dev/mmcblk0p3\
-	resize2fs /dev/mmcblk0p4\
-	resize2fs /dev/mmcblk0p5' "package/base-files/files/lib/preinit/80_mount_root"
 
 
 # firstboot 添加删除 overlay 目录命令
